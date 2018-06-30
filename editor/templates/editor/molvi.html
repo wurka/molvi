@@ -1,0 +1,126 @@
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>MolVi - Molecular Viewer</title>
+    <link rel="shortcut icon" type="image/png" href="{% static 'editor/images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'editor/style/molvi.css' %}">
+    <script src="{% static 'editor/js/jquery-3.2.0.js' %}"></script>
+    <script src="{% static 'editor/js/three.js' %}"></script>
+    <script src="{% static 'editor/js/OrbitControls.js' %}"></script>
+    <script src="{% static 'editor/js/THREE.MeshLine.js' %}"></script>
+
+    <script src="{% static 'editor/js/molviChunks.js' %}"></script>
+    <script src="{% static 'editor/js/molviConf.js' %}"></script>
+    <script src="{% static 'editor/js/mycookie.js' %}"></script>
+    <script src="{% static 'editor/js/molvi-2.js' %}"></script>
+</head>
+<body>
+    {% csrf_token %}
+
+    <div class="layout">
+        <div id="saveFileDialog">
+            <div class="title noselect">Введите имя файла для сохранения </div>
+            <input type="text" id="saveFileName" value="new_document">
+            <div class="buttons noselect">
+                <div class="mybutton" onclick="view.enableControls(); engine.saveDocumentToServer(); $('#saveFileDialog').hide();">OK</div>
+                <div class="mybutton" onclick="$('#saveFileDialog').hide(); view.enableControls()">Отмена</div>
+            </div>
+        </div>
+        <div id="openFileDialog" class="openFileDialog">
+            <div class="title noselect">Список документов</div>
+            <div class="fileView">
+                <div class="file">... загрузка ...</div>
+            </div>
+            <div class="buttons noselect">
+                <div class="mybutton" onclick="engine.openFileDialog_loadSelected()">OK</div>
+                <div class="mybutton" onclick="view.closeOpenFileDialog()">Отмена</div>
+            </div>
+        </div>
+        <div id="openFileDialogMol" class="openFileDialog">
+            <div class="title noselect">Список документов</div>
+            <div class="fileView">
+                <div class="file">... загрузка ...</div>
+            </div>
+            <div class="buttons noselect">
+                <div class="mybutton" onclick="engine.openFileDialogMol_loadSelected()">OK</div>
+                <div class="mybutton" onclick="view.closeOpenFileDialog()">Отмена</div>
+            </div>
+        </div>
+        <img src="{% static 'editor/images/favicon.png' %}" alt="icon image" class="iconImage"/>
+        <div class="header">
+            <span>MolVi: Molecula View</span>
+        </div>
+        <div class="body">
+            <div class="table">
+                <div class="row">
+                    <div class="cell">
+                        <div class="atomsView">loading...</div>
+                        <div class="linksHolder">
+                            <div class="linksView"> </div>
+                        </div>
+                    </div>
+                    <div class="cell">
+                        <div class="userControls">
+                            <div class="modeIcon">
+                                <img src="{% static 'editor/images/openplus.png' %}" class="unselectedIcon" onclick="engine.openPlusFileDialog()" id="icon_openFile"/>
+                            </div>
+                            <div class="modeIcon">
+                                <img src="{% static 'editor/images/openfolder_doc.png' %}" class="unselectedIcon" onclick="view.openFileDialog('document')" id="icon_openPlusFile"/>
+                            </div>
+                            <div class="modeIcon">
+                                <img src="{% static 'editor/images/openfolder_mol.png' %}" class="unselectedIcon" onclick="view.openFileDialog('mol')" id="icon_openPlusFile"/>
+                            </div>
+                            <div class="modeIcon">
+                                <img src="{% static 'editor/images/save.png' %}" class="unselectedIcon" onclick="view.showSaveFileDialog()" id="icon_saveDocument" title="Сохранить документ"/>
+                            </div>
+                            <div class="modeIcon">
+                                <input type="text" name="" id="traceRange" onclick="document.getElementById(this.id).focus()" onkeydown="engine.autoTraceKeyPressed" onfocus="view.disableControls()" onfocusout="view.enableControls()">
+                                <img src="{% static 'editor/images/autotrace.png' %}" class="unselectedIcon" onclick="engine.executeAutoTrace()" id="icon_autotraceUnselected"/>
+                            </div>
+                            <div class="modeIcon">
+                                <img src="{% static 'editor/images/linemode.png' %}" onclick="selectMode('line')" class='modeIcon unselectedIcon' id='icon_modeLineUnselected'/>
+                            </div>
+                            <div class="modeIcon">
+                                <img src="{% static 'editor/images/linemode_selected.png' %}" class="modeIcon selectedIcon" onclick="selectMode('none')" id='icon_modeLineSelected'/>
+                            </div>
+                            
+                        </div>
+                        <div id="infoMessageField">
+                            <div id="infoMessage"> 
+                                <div id="infoMessageText">Привет, путник.</div>
+                                <div class="buttons" id="infoCloseButton" onclick='MolviEngine.userMessage()'>close</div>
+                            </div>                            
+                        </div>
+                        <div id="moleculaMoveControls">
+                            <div class="title">Перемещение молекулы</div>
+                            <div class="hidden" id="moveMoleculaId"></div>
+                            <div class='inputLine'><span>x</span><input type="text" id='moveControl_x' onclick='document.getElementById(this.id).focus()'></div>
+                            <div class='inputLine'><span>y</span><input type="text" id='moveControl_y' onclick='document.getElementById(this.id).focus()'></div>
+                            <div class='inputLine'><span>z</span><input type="text" id='moveControl_z' onclick='document.getElementById(this.id).focus()'></div>
+                            <div class="buttons">
+                                <div class="button ok" onclick="engine.doMoleculaMove()">OK</div>
+                                <div class="button cancel" onclick="engine.closeMoveControls()">Отмена</div>
+                            </div>
+                        </div>
+                        <div class="display" id="display"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="buttons">
+                <input value="Добавить" type="button" onclick="AddAtom()"/>
+                <input value="Обновить" type="button" onclick="UpdateAtomList()"/>
+                <input value="Сохранить" type="button" onclick="engine.saveDocumentToServer()"/>
+            </div>
+        </div>
+        <div>
+            <input onclick="document.getElementById('zhopa').focus()" id="zhopa"/>
+        </div>
+        <div class="footer">footer</div>
+    </div>
+    <div id="errorMessage"></div>
+</body>
+</html>

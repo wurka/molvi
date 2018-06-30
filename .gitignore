@@ -1,0 +1,8 @@
+/.idea
+/*.sqlite3
+/editor/__pycache__
+/editor/files/currentFile.txt
+/editor/files/documents
+/editor/migrations/__pycache__
+/editor/static/editor/style/*.map
+/molvi/__pycache__

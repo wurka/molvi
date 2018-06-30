@@ -1,0 +1,47 @@
+body
+    background: lightgray
+
+.table
+    display: table
+    width: 100%
+    background: pink
+    
+.row
+    display: table-row
+.cell
+    display: table-cell
+
+.layout
+    border: 1px solid #000
+    width: 600px
+    margin: auto
+    height: 100%
+    .header
+        height: 30px
+        .content
+            border: 1px solid #000
+            height: 100%
+    .footer
+        height: 30px
+        .content
+            border: 1px solid #000
+            height: 100%
+    .body
+        height: calc(100% - 60px)
+        background: pink
+        font-size: 0px
+    .block1
+        display: inline-block
+        height: 100%
+        width: 200px
+        background: lime
+        vertical-align: top
+        font-size: 14px
+        overflow: auto
+    .block2
+        display: inline-block
+        background: salmon
+        width: 400px
+        height: 100%
+        overflow: auto
+        font-size: 14px
