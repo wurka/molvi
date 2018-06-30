@@ -65,13 +65,16 @@
                     <div class="cell">
                         <div class="userControls">
                             <div class="modeIcon">
-                                <img src="{% static 'editor/images/openplus.png' %}" class="unselectedIcon" onclick="engine.openPlusFileDialog()" id="icon_openFile"/>
+                                <img src="{% static 'editor/images/rotate.png' %}" class="unselectedIcon" onclick="view.openFileDialog('document')" id="icon_openPlusFile"/>
                             </div>
                             <div class="modeIcon">
                                 <img src="{% static 'editor/images/openfolder_doc.png' %}" class="unselectedIcon" onclick="view.openFileDialog('document')" id="icon_openPlusFile"/>
                             </div>
                             <div class="modeIcon">
                                 <img src="{% static 'editor/images/openfolder_mol.png' %}" class="unselectedIcon" onclick="view.openFileDialog('mol')" id="icon_openPlusFile"/>
+                            </div>
+                            <div class="modeIcon">
+                                <img src="{% static 'editor/images/openplus.png' %}" class="unselectedIcon" onclick="view.openFileDialog('plusmol')" id="icon_openFile"/>
                             </div>
                             <div class="modeIcon">
                                 <img src="{% static 'editor/images/save.png' %}" class="unselectedIcon" onclick="view.showSaveFileDialog()" id="icon_saveDocument" title="Сохранить документ"/>
@@ -81,10 +84,10 @@
                                 <img src="{% static 'editor/images/autotrace.png' %}" class="unselectedIcon" onclick="engine.executeAutoTrace()" id="icon_autotraceUnselected"/>
                             </div>
                             <div class="modeIcon">
-                                <img src="{% static 'editor/images/linemode.png' %}" onclick="selectMode('line')" class='modeIcon unselectedIcon' id='icon_modeLineUnselected'/>
+                                <img src="{% static 'editor/images/linemode.png' %}" onclick="engine.selectMode('line')" class='modeIcon unselectedIcon' id='icon_modeLineUnselected'/>
                             </div>
                             <div class="modeIcon">
-                                <img src="{% static 'editor/images/linemode_selected.png' %}" class="modeIcon selectedIcon" onclick="selectMode('none')" id='icon_modeLineSelected'/>
+                                <img src="{% static 'editor/images/linemode_selected.png' %}" class="modeIcon selectedIcon" onclick="engine.selectMode('none')" id='icon_modeLineSelected'/>
                             </div>
                             
                         </div>
@@ -96,14 +99,24 @@
                         </div>
                         <div id="moleculaMoveControls">
                             <div class="title">Перемещение молекулы</div>
-                            <div class="hidden" id="moveMoleculaId"></div>
-                            <div class='inputLine'><span>x</span><input type="text" id='moveControl_x' onclick='document.getElementById(this.id).focus()'></div>
-                            <div class='inputLine'><span>y</span><input type="text" id='moveControl_y' onclick='document.getElementById(this.id).focus()'></div>
-                            <div class='inputLine'><span>z</span><input type="text" id='moveControl_z' onclick='document.getElementById(this.id).focus()'></div>
-                            <div class="buttons">
-                                <div class="button ok" onclick="engine.doMoleculaMove()">OK</div>
-                                <div class="button cancel" onclick="engine.closeMoveControls()">Отмена</div>
+                            <div class="moveActions">
+                                <div class="moveAction selected" id="moveAction_move" onclick="view.moveAction('moveAction_move')">Переместить</div>
+                                <div class="moveAction" id="moveAction_rotate" onclick="view.moveAction('moveAction_rotate')">Повернуть</div>
                             </div>
+                            <div class="moveAction_move_content moveActionContent">
+                                <div class="hidden" id="moveMoleculaId"></div>
+                                <div class='inputLine'><span>x</span><input type="text" id='moveControl_x' onclick='document.getElementById(this.id).focus()'></div>
+                                <div class='inputLine'><span>y</span><input type="text" id='moveControl_y' onclick='document.getElementById(this.id).focus()'></div>
+                                <div class='inputLine'><span>z</span><input type="text" id='moveControl_z' onclick='document.getElementById(this.id).focus()'></div>
+                                <div class="buttons">
+                                    <div class="button ok" onclick="engine.doMoleculaMove()">OK</div>
+                                    <div class="button cancel" onclick="engine.closeMoveControls()">Отмена</div>
+                                </div>
+                            </div>
+                            <div class="moveAction_move_rotate moveActionContent">
+                                ROTATE
+                            </div>
+
                         </div>
                         <div class="display" id="display"></div>
                     </div>

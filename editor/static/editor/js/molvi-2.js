@@ -1,5 +1,6 @@
 "use strict";
 //import getCookie from "mycookie";
+//import * as THREE from "./three";
 
 class Settings {
     constructor() {
@@ -90,7 +91,7 @@ class MolviEngine {
             },
             success: function (data) {
                 var html = "",
-                    htmlChunk = "<div class=\"file\" id='[+id]' onclick='$(\"#openFIleDialog>.fileView>.file\").removeClass(\"selected\"); $(this).toggleClass(\"selected\")'>[+content]</div>",
+                    htmlChunk = "<div class=\"file\" id='[+id]' onclick='$(\"#openFIleDialog>.fileView>.file\").removeClass(\"selected\"); $(this).toggleClass(\"selected\")' ondblclick='$(\"#openFileDialog .mybutton:first-child\").click()'>[+content]</div>",
                     dict = JSON.parse(data);
 
                 dict.forEach(function (item) {
@@ -109,7 +110,7 @@ class MolviEngine {
             },
             success: function (data) {
                 var html = "",
-                    htmlChunk = "<div class=\"file\" id='[+id]' onclick='$(\".openFIleDialog>.fileView>.file\").removeClass(\"selected\"); $(this).toggleClass(\"selected\")'>[+content]</div>",
+                    htmlChunk = "<div class=\"file\" id='[+id]' onclick='$(\".openFIleDialog>.fileView>.file\").removeClass(\"selected\"); $(this).toggleClass(\"selected\")'  ondblclick='$(\"#openFileDialogMol .mybutton:first-child\").click()' >[+content]</div>",
                     dict = JSON.parse(data);
 
                 dict.forEach(function (item) {
@@ -161,7 +162,7 @@ class MolviEngine {
     /**
      * Загрузка выбранного в списке fileView (.mol) файла     *
      */
-    openFileDialogMol_loadSelected() {
+    openFileDialogMol_loadSelected(deleteold=true) {
         var element = $("#openFileDialogMol .selected"),
             fileName = "";
 
@@ -173,7 +174,27 @@ class MolviEngine {
             fileName = element.html();
             console.log(fileName);
 
-            view.closeOpenFileDialog();
+            $.ajax({
+                url: settings.loadMolFileUrl,
+                data: {
+                    'filename': fileName
+                },
+                error(data) {
+                    $("#openFileDialogMol .fileView").html(data.responseText);
+                },
+                success(data) {
+                    // получен json файл с информацией о молекуле
+                    console.log(data);
+                    try {
+                        engine.buildAtomData(data, deleteold);
+                        view.closeOpenFileDialog();
+                    } catch (err) {
+                        $("#openFileDialogMol .fileView").html("ERROR: " + err.message);
+                    }
+
+                }
+            });
+
         }
     }
 
@@ -214,6 +235,13 @@ class MolviEngine {
 
         $(".atomsView").html(html);
         $(".linksView").html(linkshtml);
+    }
+
+    selectionMaterial(){
+        var ans = new THREE.MeshPhongMaterial({
+            color: 0xef2500
+        });
+        return ans;
     }
 
     /**
@@ -781,7 +809,7 @@ class MolviView {
 
         //this.controls.update();
 
-        //handleSelection();
+        view.handleSelection();
 
         view.renderer.render(view.scene, view.camera);
     }
@@ -846,6 +874,35 @@ class MolviView {
         view.controls.enabled = false;
     }
 
+    /**
+     * Обработка наведения на элементы
+     */
+    handleSelection(){
+        view.raycaster.setFromCamera(view.mousePosition, view.camera);
+        //console.log(mousePosition);
+
+        var atoms = view.atomGroup.children,
+            intersects = view.raycaster.intersectObjects(atoms);
+
+
+        var highlighted = [];
+        for (var i = 0; i < atoms.length; i++){
+            atoms[i].material =  engine.buildAtomMaterial(atoms[i].name);
+        }
+
+        for (var i = 0; i < intersects.length; i++) {
+            intersects[i].object.material = engine.selectionMaterial();
+            highlighted.push(intersects[i]);
+        }
+
+        // изменение материала выделенных атомов
+        /*for (var i = 0; i < selectedAtoms.length; i++) {
+            selectedAtoms[i].material = selectionMaterial;
+        }*/
+    }
+
+
+
     showSaveFileDialog() {
         $('#saveFileDialog').show();
         view.disableControls();
@@ -862,7 +919,15 @@ class MolviView {
         } else if (mode == "mol") {
             $("#openFileDialogMol").show();
             engine.molList2Explorer();
+            var handler = 'engine.openFileDialogMol_loadSelected(true)';
+            $("#openFileDialogMol .mybutton:first-child").attr('onclick', handler);
             view.disableControls()
+        } else if (mode == 'plusmol') {
+            $("#openFileDialogMol").show();
+            engine.molList2Explorer();
+            var handler = 'engine.openFileDialogMol_loadSelected(false)';
+            $("#openFileDialogMol .mybutton:first-child").attr('onclick', handler);
+            view.disableControls();
         }
     }
 
@@ -871,6 +936,12 @@ class MolviView {
         view.enableControls();
     }
 
+    moveAction(id) {
+        $(".moveActionContent").hide();
+        $("." + id + "_content").show();
+        $(".moveAction").removeClass("selected");
+        $("#" + id).addClass("selected");
+    }
 }
 
 var engine = new MolviEngine(),

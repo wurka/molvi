@@ -25,4 +25,5 @@ urlpatterns = [
 	path('get-documents', views.get_documents),
 	path('get-mol-files', views.get_mol_files),
 	path('get-document', views.get_document),
+	path('get-mol-file', views.get_mol_file),
 ]

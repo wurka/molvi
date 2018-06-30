@@ -1,10 +1,8 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from .views_utils import *
 import os
 import json
-from tkinter import filedialog
-from tkinter import Tk
 
 
 # Create your views here.
@@ -16,21 +14,17 @@ def open_file_dialog(request):
 	return HttpResponse("OK")
 
 
-def get_last_mol_file(request):
+def mol_file_data(file_name):
+	"""
+	Return json string, contains data from .mol file
+	with name <file_name>
+	:param file_name: name of .mol file
+	:return: json string
+	"""
 	ans = ""
 	atoms = list()
 
-	# чтение файла currentFile.txt
-	try:
-		# "./files/2Cl3NTh_mf_cc3_cub.mol"
-		path = os.path.abspath("editor/files/currentFile.txt")
-		with open(path, encoding="UTF-8") as f:
-			file_name = f.read()
-	except FileNotFoundError:
-		ans += "currentFile.txt not found on server"
-		# ans += str(os.listdir())
-		return HttpResponse(ans)
-	# чтение файла, указанного в currentFile.txt
+	# чтение файла file_name
 	try:
 		with open(file_name) as f:
 			lines = f.readlines()
@@ -38,7 +32,7 @@ def get_last_mol_file(request):
 		ans += "error while reading .mol data. "
 		ans += str(ex)
 		# ans += str(os.listdir())
-		return HttpResponse(ans)
+		return Http404(ans + ans)
 
 	mode = "scan"  # активный режим работы
 	n = len(lines)
@@ -91,11 +85,38 @@ def get_last_mol_file(request):
 
 	# считывание из файла завершено заполнен список atoms
 	ans = atoms2json(atoms)
+	return ans
+
+
+def get_last_mol_file(request):
+	ans = ""
+
+	# чтение файла currentFile.txt
+	try:
+		# "./files/2Cl3NTh_mf_cc3_cub.mol"
+		path = os.path.abspath("editor/files/currentFile.txt")
+		with open(path, encoding="UTF-8") as f:
+			file_name = f.read()
+	except FileNotFoundError:
+		ans += "currentFile.txt not found on server"
+		# ans += str(os.listdir())
+		return HttpResponse(ans)
+	# обработка файла, указанного в currentFile.txt
+	ans = mol_file_data(file_name)
+	return HttpResponse(ans)
+
+
+def get_mol_file(request):
+	if 'filename' not in request.GET:
+		return Http404("There is no <filename> parameter!")
+	file_name = request.GET['filename']
+	mol_dir = os.path.abspath(os.path.join("editor", "files", "mols"))
+	file_name = os.path.join(mol_dir, file_name)
+	ans = mol_file_data(file_name)
 	return HttpResponse(ans)
 
 
 def save_document(request):
-	ans = "OK"
 	if 'document' not in request.POST:
 		return HttpResponse("There is no 'document' field in request")
 
@@ -146,5 +167,4 @@ def get_document(request):
 			content = f.read()
 			return HttpResponse(content)
 	except IOError as ex:
-		return HttpResponse("Error while file reading: " + str(ex))
-
+		return Http404("Error while file reading: " + str(ex))
