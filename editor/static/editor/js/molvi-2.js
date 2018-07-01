@@ -2,6 +2,7 @@
 //import getCookie from "mycookie";
 //import * as THREE from "./three";
 
+
 class Settings {
     constructor() {
         this.openFileUrl = "/molvi/server/open-file-dialog";
@@ -12,6 +13,7 @@ class Settings {
         this.sphereDetalisation = 20;  // количество полигонов при отрисовке сферических объектов
         this.getDocumentsUrl = "/molvi/get-documents"; // запрос документов на сервере
         this.getMolsUrl = "/molvi/get-mol-files"; // запрос .mol файлов на сервере
+        this.rotateClusterUrl = "/molvi/rotate-cluster";  // запрос на вращение кластера молекул относительно точки
     }
 }
 var settings = new Settings();
@@ -71,6 +73,8 @@ class MolviDocument {
         this.links = [];
         this.clusters = [];
         this.documentName = "no name"
+
+        this.selectedAtomIds = []
     }
 }
 
@@ -147,8 +151,28 @@ class MolviEngine {
                 success(data) {
                     $("#openFileDialog .fileView").html("обработка ответа");
                     try {
-                        var doc = JSON.parse(data);
-                        console.log(doc);
+                        var loaded_doc = JSON.parse(data);
+
+                        // создание нового документа
+                        doc = new MolviDocument();
+                        loaded_doc.clusters.forEach(function (lc) {
+                            var newCluster = new Cluster();
+                            newCluster.caption = lc.caption;
+                            newCluster.id = lc.id;
+                            doc.clusters.push(newCluster);
+
+                            lc.atoms.forEach(function (la) {
+                                var newAtom = new Atom(la.x, la.y, la.z, la.name);
+                                newAtom.mass = la.mass;
+                                newAtom.radius = MolviConf.getAtomRadius(la.name);
+
+                                newCluster.atomList.push(newAtom);
+                            });
+                        });
+                        engine.build3DFromDoc();
+                        engine.buildHtmlFromDoc();
+
+                        view.closeOpenFileDialog();
                     } catch (err) {
                         $("#openFileDialog .fileView").html("Error: " + err.message);
                     }
@@ -238,8 +262,8 @@ class MolviEngine {
     }
 
     selectionMaterial(){
-        var ans = new THREE.MeshPhongMaterial({
-            color: 0xef2500
+        var ans = new THREE.MeshNormalMaterial({ // .MeshPhongMaterial({
+            // color: 0xef2500
         });
         return ans;
     }
@@ -264,8 +288,11 @@ class MolviEngine {
         while (view.atomGroup.children.length > 0) {
             view.atomGroup.children[0] = null;
             view.atomGroup.children.splice(0, 1);
+            view.atomMaterials[0] = null;
+            view.atomMaterials.splice(0, 1);
         }
 
+        //////////////////// Clusters & atoms ////////////////////////
         doc.clusters.forEach(function (cluster) {
             cluster.atomList.forEach(function (atom) {
                 var x = parseFloat(atom.x),
@@ -281,9 +308,11 @@ class MolviEngine {
                 mesh.position.y = y;
                 mesh.position.z = z;
                 view.atomGroup.children.push(mesh);
+                view.atomMaterials.push(material);
             });
         });
 
+        /////////////////////// LINKS ///////////////////////////////
         //удаление старых Mesh'эй
         while (view.linkGroup.children.length > 0) {
             view.linkGroup.children[0] = null;
@@ -318,13 +347,46 @@ class MolviEngine {
             view.linkGroup.add(lineMesh);
 
         })
+
+        ////////////////////// SELECTED ///////////////////////
+        while (view.outlinesGroup.children.length > 0) {
+            view.outlinesGroup.children[0] = null;
+            view.outlinesGroup.children.splice(0, 1);
+        }
+
+        doc.selectedAtomIds.forEach(function (id) {
+            var satom = null;
+
+            doc.clusters.forEach(function (cluster) {
+                cluster.atomList.forEach(function (atom) {
+                    if (atom.id == id) {
+                        satom = atom;
+                    }
+                });
+            });
+
+            if (satom == null) {
+                console.error("id not found in doc atom list");
+                return;
+            }
+
+            var outlineMaterial = new THREE.MeshBasicMaterial({color: 0x8A00BD, side: THREE.BackSide}),
+                r = MolviConf.getAtomRadius(satom.name) * 1.2,
+                sd = settings.sphereDetalisation,
+                outlineGeometry = new THREE.SphereGeometry(r, sd, sd),
+                outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
+
+            outline.position.set(satom.x, satom.y, satom.z);
+            //outline.scale.multiplyScalar(1.1);
+            view.outlinesGroup.add(outline);
+        })
     }
 
     /**
      * Показать сообщение для пользователя 
      * (вызов без аргументов спрячет поле сообщений)
      */
-    static userMessage(message) {
+    userMessage(message) {
         "use strict";
         if (!message){
             $("#infoMessageField").hide();
@@ -340,6 +402,55 @@ class MolviEngine {
     }
 
     static onMouseDown(/*event*/) {
+        if (view.highlights.length == 1) {
+            var point = view.highlights[0].point, // точка пересечения raycaster'a с объектом
+                r = 0,
+                owners = [],
+                sx, sy, sz;
+            // вычисление того, какому объекту принадлежит эта точка
+            doc.clusters.forEach(function (cluster) {
+                cluster.atomList.forEach(function (atom) {
+                    r = MolviConf.getAtomRadius(atom.name);
+
+                    sx = (point.x - atom.x)*(point.x - atom.x);
+                    sy = (point.y - atom.y)*(point.y - atom.y);
+                    sz = (point.z - atom.z)*(point.z - atom.z);
+
+                    if (Math.sqrt(sx + sy + sz) <= r) {
+                        console.log(atom.name);
+                        owners.push(atom);
+                    }
+                });
+            });
+
+            owners.forEach(function (owner) {
+                engine.selectAtomById(owner.id);
+            });
+        }
+
+        // действия, зависящие от режима управления
+        if (engine.controlMode == "rotate") {
+            if (doc.selectedAtomIds.length >= 1) {
+                $("#transformRotate>.origin").val(doc.selectedAtomIds[0]);
+                engine.userMessage();
+                if (doc.selectedAtomIds.length > 1) {
+                    console.error("zdes tvoritsia mistika!");
+                }
+                $("#transformRotate").show();
+                view.disableControls();
+                window.requestAnimationFrame(function () {
+                    $("#tr_dx").val(0.0);
+                    $("#tr_dy").val(0.0);
+                    $("#tr_dz").val(0.0);
+                    $("#tr_dx").focus();
+                    $("#tr_dx").select();
+                })
+            }
+        } else {
+
+        }
+
+
 
         //ids = []
         /*var id = -1,
@@ -390,10 +501,10 @@ class MolviEngine {
     
         console.log(ids);
         // не выбрано ниодного атома
-        if (!ids) {
+        if (ids.length == 0) {
             this.linkCreationSource = [];
             
-            userMessage("Выберите атом #1");
+            engine.userMessage("Выберите атом #1");
             return;
         }
     
@@ -404,10 +515,10 @@ class MolviEngine {
         }
         if (this.linkCreationSource.length == 0){
             this.linkCreationSource.push(ids[0]);
-            MolviEngine.userMessage("Выберите атом #2");
+            engine.userMessage("Выберите атом #2");
         } else if (this.linkCreationSource.length == 1){
             this.linkCreationSource.push(ids[0]);
-            MolviEngine.userMessage();
+            engine.userMessage();
             var newLink = new WLink(this.linkCreationSource[0], this.linkCreationSource[1]),
                 p1 = atomGroup.children[newLink.from].position,
                 p2 = atomGroup.children[newLink.to].position,
@@ -439,7 +550,7 @@ class MolviEngine {
         "use strict";
         $(".selectedIcon").hide();
         $(".unselectedIcon").show();
-        this.controlMode = modeName;
+        engine.controlMode = modeName;
     
         if(modeName === 'line'){
             $("#icon_modeLineUnselected").hide();
@@ -471,6 +582,32 @@ class MolviEngine {
 
     }
 
+    /**
+     *
+      * @param id
+     */
+    selectAtomById(id, clear=false) {
+        // принудительные значения clear
+        if (engine.controlMode == 'line') {
+            clear = false;
+        } else if (engine.controlMode == 'none'){
+            clear = true;
+        }
+
+        if (clear) {
+            doc.selectedAtomIds = [];
+        }
+        doc.selectedAtomIds.push(id);
+        engine.build3DFromDoc();
+    }
+
+    /**
+     * Снять выделение со всех атомов
+     */
+    unselectAtoms() {
+        doc.selectedAtomIds = [];
+        engine.build3DFromDoc();
+    }
 
 
     /**
@@ -651,6 +788,89 @@ class MolviEngine {
         engine.build3DFromDoc();
     }
 
+    rotateCluster(centerAtomId = null, dx = null, dy = null, dz = null) {
+        if (centerAtomId == null) {
+            engine.unselectAtoms();
+
+            engine.userMessage("Выберите атом (центр вращения)");
+            engine.controlMode = "rotate";
+        } else {
+            // уже выбран атом, вокруг которого надо крутить молекулу
+
+            $("#transformRotate>.dx>input").val("0.0");
+            $("#transformRotate>.dy>input").val("0.0");
+            $("#transformRotate>.dz>input").val("0.0");
+        }
+
+    }
+
+    /**
+     * Вызов вращения кластера из html страницы
+     */
+    rotateClusterFromHtml() {
+        var cluster = null,
+            originId = parseInt($("#rotateOrigin").val()),
+            ox = 0,
+            oy = 0,
+            oz = 0,
+            atoms = [];
+
+        doc.clusters.forEach(function (ccluster) {
+            ccluster.atomList.forEach(function (atom) {
+                if (atom.id == originId) {
+                    cluster = ccluster;
+                    ox = atom.x;
+                    oy = atom.y;
+                    oz = atom.z;
+                }
+            });
+        });
+
+        if (cluster != null) {
+            cluster.atomList.forEach(function (atom) {
+                atoms.push({"x": atom.x, "y": atom.y, "z": atom.z});
+            });
+            var ax = parseFloat($("#tr_dx").val()),
+                ay = parseFloat($("#tr_dy").val()),
+                az = parseFloat($("#tr_dz").val()),
+                atoms_json = JSON.stringify(atoms);
+
+            $.ajax({
+                url: settings.rotateClusterUrl,
+                data: {
+                    "points": atoms_json,
+                    "origin": JSON.stringify({"x": ox, "y": oy, "z": oz}),
+                    "ax": ax,
+                    "ay": ay,
+                    "az": az
+                },
+                error(data) {
+                    console.error($("body").html(data.responseText));
+                },
+                success(data) {
+                    console.log(cluster);
+                    var ans = JSON.parse(data);
+                    ans.forEach(function (a, indx) {
+                        cluster.atomList[indx].x = a[0];
+                        cluster.atomList[indx].y = a[1];
+                        cluster.atomList[indx].z = a[2];
+                    });
+                    engine.build3DFromDoc();
+                    engine.buildHtmlFromDoc();
+                    engine.closeRotationHtml();
+                }
+
+            });
+        }
+    }
+
+    closeRotationHtml() {
+        $("#transformRotate").hide();
+        engine.controlMode = 'none';
+        view.enableControls();
+        engine.unselectAtoms();
+    }
+
     saveDocumentToServer() {
         var mydoc = {
             "documentName": $("#saveFileName").val(),
@@ -728,7 +948,7 @@ class MolviEngine {
                 }
             },
             error: function(data, x){
-                MolviEngine.userMessage("Ошибка при сохранении документа на сервер");
+                engine.userMessage("Ошибка при сохранении документа на сервер");
                 console.error(data);
                 $("body").html(data.responseText);
             }
@@ -751,6 +971,7 @@ class MolviView {
         this.linkGroup.name = "linkGroup";
         this.atomGroup = new THREE.Group();
         this.atomGroup.name = "atomGroup";
+        this.atomMaterials = [];
         this.outlinesGroup = new THREE.Group();
         this.outlinesGroup.name = "outlines group";
         this.engine = null;
@@ -759,6 +980,11 @@ class MolviView {
         this.controls = null;
         this.viewHeight = 50;
         this.viewWidth = 50;
+
+        // "рабочие" группы
+        this.highlights = [];  // Array<Three.Mesh>
+        this.selected = [];  // Array<Three.Mesh>
+
     }
 
     init() {
@@ -885,15 +1111,43 @@ class MolviView {
             intersects = view.raycaster.intersectObjects(atoms);
 
 
-        var highlighted = [];
+        //var highlighted = view.highlights;
+        view.highlights = [];
+
         for (var i = 0; i < atoms.length; i++){
-            atoms[i].material =  engine.buildAtomMaterial(atoms[i].name);
+            atoms[i].material =  view.atomMaterials[i]; //engine.buildAtomMaterial(atoms[i].name);
         }
 
+        // выбор всех элементов, надо которыми наведена мышка///////
+        /*
         for (var i = 0; i < intersects.length; i++) {
             intersects[i].object.material = engine.selectionMaterial();
             highlighted.push(intersects[i]);
+        }*/
+        ////////////////////////////////////
+
+        // выбор только ближайшего//////////
+        if (intersects.length > 0) {
+            view.highlights.push(intersects[0]);
         }
+
+        for (var i = 0; i < intersects.length; i++) {
+            if (view.highlights.length == 0) {
+                view.highlights.push(intersects[i]);
+            }
+            if (intersects[i].distance < view.highlights[0].distance) {
+                view.highlights.splice(0, 1);
+                view.highlights.push(intersects[i]);
+            }
+        }
+        ///////////////////////////////////
+
+        // подсветка выделенного
+
+        for (var i = 0; i < view.highlights.length; i++) {
+            view.highlights[i].object.material = engine.selectionMaterial();
+        }
+
 
         // изменение материала выделенных атомов
         /*for (var i = 0; i < selectedAtoms.length; i++) {
@@ -955,7 +1209,7 @@ $(document).ready(function(){
     MolviView.instance = view;
 
 
-    MolviEngine.userMessage();
+    engine.userMessage();
 
     engine.selectMode("none");
     //добавление обработчиков

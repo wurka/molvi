@@ -65,7 +65,7 @@
                     <div class="cell">
                         <div class="userControls">
                             <div class="modeIcon">
-                                <img src="{% static 'editor/images/rotate.png' %}" class="unselectedIcon" onclick="view.openFileDialog('document')" id="icon_openPlusFile"/>
+                                <img src="{% static 'editor/images/rotate.png' %}" class="unselectedIcon" onclick="engine.rotateCluster()" id="icon_openPlusFile"/>
                             </div>
                             <div class="modeIcon">
                                 <img src="{% static 'editor/images/openfolder_doc.png' %}" class="unselectedIcon" onclick="view.openFileDialog('document')" id="icon_openPlusFile"/>
@@ -94,15 +94,11 @@
                         <div id="infoMessageField">
                             <div id="infoMessage"> 
                                 <div id="infoMessageText">Привет, путник.</div>
-                                <div class="buttons" id="infoCloseButton" onclick='MolviEngine.userMessage()'>close</div>
+                                <div class="buttons" id="infoCloseButton" onclick='engine.userMessage()'>close</div>
                             </div>                            
                         </div>
                         <div id="moleculaMoveControls">
                             <div class="title">Перемещение молекулы</div>
-                            <div class="moveActions">
-                                <div class="moveAction selected" id="moveAction_move" onclick="view.moveAction('moveAction_move')">Переместить</div>
-                                <div class="moveAction" id="moveAction_rotate" onclick="view.moveAction('moveAction_rotate')">Повернуть</div>
-                            </div>
                             <div class="moveAction_move_content moveActionContent">
                                 <div class="hidden" id="moveMoleculaId"></div>
                                 <div class='inputLine'><span>x</span><input type="text" id='moveControl_x' onclick='document.getElementById(this.id).focus()'></div>
@@ -113,10 +109,25 @@
                                     <div class="button cancel" onclick="engine.closeMoveControls()">Отмена</div>
                                 </div>
                             </div>
-                            <div class="moveAction_move_rotate moveActionContent">
-                                ROTATE
+                        </div>
+                        <div id="transformRotate">
+                            <input type="hidden" name="rotateOrigin" id="rotateOrigin" class="origin">
+                            <div class="title">Укажите величину поворота</div>
+                            <div>
+                                <div class="dx">
+                                    <label for="tr_dx">Вокруг оси Х</label><input id="tr_dx"><label for="tr_dx">, град</label>
+                                </div>
+                                <div class="dy">
+                                    <label for="tr_dy">Вокруг оси Y</label><input id="tr_dy"><label for="tr_dy">, град</label>
+                                </div>
+                                <div class="dz">
+                                    <label for="tr_dz">Вокруг оси Z</label><input id="tr_dz"><label for="tr_dz">, град</label>
+                                </div>
                             </div>
-
+                            <div class="buttons">
+                                <div class="mybutton" onclick="engine.rotateClusterFromHtml()">OK</div>
+                                <div class="mybutton" onclick="engine.closeRotationHtml()">Oтмена</div>
+                            </div>
                         </div>
                         <div class="display" id="display"></div>
                     </div>

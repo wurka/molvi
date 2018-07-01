@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse, Http404
 from .views_utils import *
+from .mathutils import rotate_by_deg
 import os
 import json
 
@@ -163,8 +164,39 @@ def get_document(request):
 	doc_dir = os.path.abspath(os.path.join("editor", "files", "documents"))
 	doc_file = os.path.join(doc_dir, document_name)
 	try:
-		with open(doc_file, 'rt') as f:
+		with open(doc_file, 'rt', encoding='utf-8') as f:
 			content = f.read()
 			return HttpResponse(content)
 	except IOError as ex:
 		return Http404("Error while file reading: " + str(ex))
+
+
+def rotate_cluster(request):
+	"""
+	Вращение кластера вокруг точки. Обязательные GET параметры:
+	points = json array [{x: x1, y: y1, z:z1}, {x: x2, y: y2, z: z2}]
+	origin = json object {x: x0, y: y0, z: z0}
+	:return: json array такой же как Points, но с другими координатами
+	"""
+	if 'points' not in request.GET:
+		return Http404("there is no points parameter")
+	if 'origin' not in request.GET:
+		return Http404("there is no origin parameter")
+	ax, ay, az = 0, 0, 0  # углы разворота
+	if 'ax' in request.GET:
+		ax = float(request.GET['ax'])
+	if 'ay' in request.GET:
+		ay = float(request.GET['ay'])
+	if 'az' in request.GET:
+		az = float(request.GET['az'])
+	points = json.loads(request.GET['points'])
+	origin = json.loads(request.GET['origin'])
+	ox, oy, oz = float(origin['x']), float(origin['y']), float(origin['z'])
+	newpoints = list()
+	for point in points:
+		x, y, z = float(point['x']), float(point['y']), float(point['z'])
+		newpoint = rotate_by_deg(x, y, z, ox, oy, oz, ax, ay, az)
+		newpoints.append(newpoint)
+
+	ans = json.dumps(newpoints)
+	return HttpResponse(ans)

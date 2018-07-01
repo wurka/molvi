@@ -248,4 +248,22 @@
   .moveActions .selected {
     border: 1px solid black; }
 
+#transformRotate {
+  width: auto;
+  background: white;
+  position: absolute;
+  margin: 100px 0px 0px 100px;
+  box-shadow: 0px 0px 10px white;
+  display: none; }
+  #transformRotate .title {
+    font-size: 1.5em;
+    margin: 10px 10px 5px 10px; }
+  #transformRotate div {
+    margin: 5px 15px 5px 15px; }
+    #transformRotate div input {
+      display: inline-block;
+      margin: 0px 0px 0px 5px; }
+  #transformRotate .buttons {
+    text-align: right; }
+
 /*# sourceMappingURL=molvi.css.map */
