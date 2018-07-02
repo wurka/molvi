@@ -59,7 +59,7 @@ var linkList = [],
     atomList = []
 
 var linkChunk = `
-    <div class="link" id="link_0" onmouseover="highlightLink([ID])" onmouseout="highlightLink()">
+    <div class="link" id="link_0" onmouseover="engine.selectLinkById([ID])" onmouseout="engine.unselectLinks()">
         <div class='cell'>
             <span>[FROM]</span><span> - </span><span>[TO]</span>
         </div>

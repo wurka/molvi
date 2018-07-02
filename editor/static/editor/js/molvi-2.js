@@ -72,9 +72,10 @@ class MolviDocument {
     constructor() {
         this.links = [];
         this.clusters = [];
-        this.documentName = "no name"
+        this.documentName = "no name";
 
-        this.selectedAtomIds = []
+        this.selectedAtomIds = [];  // список выделенных атомов
+        this.selectedLinkIds = [];  // список выделенных Link-ов
     }
 }
 
@@ -343,7 +344,12 @@ class MolviEngine {
                 return;
             }
 
-            var lineMesh = view.buildLineMesh(atom1.x, atom1.y, atom1.z, atom2.x, atom2.y, atom2.z, 0xf6ff0f);
+            var lineColor = 0xf6ff0f;
+            if (doc.selectedLinkIds.includes(link.id)) {
+                lineColor = 0xff0000;
+            }
+
+            var lineMesh = view.buildLineMesh(atom1.x, atom1.y, atom1.z, atom2.x, atom2.y, atom2.z, lineColor);
             view.linkGroup.add(lineMesh);
 
         })
@@ -429,7 +435,7 @@ class MolviEngine {
         }
 
         // действия, зависящие от режима управления
-        if (engine.controlMode == "rotate") {
+        if (engine.controlMode == "rotate") {  // вращение кластера
             if (doc.selectedAtomIds.length >= 1) {
                 $("#transformRotate>.origin").val(doc.selectedAtomIds[0]);
                 engine.userMessage();
@@ -446,8 +452,11 @@ class MolviEngine {
                     $("#tr_dx").select();
                 })
             }
-        } else {
-
+        } else if (engine.controlMode == "link") { // создание связи
+            engine.linkCreationSource = doc.selectedAtomIds;
+            engine.linkCreation();
+            //console.log(doc.selectedAtomIds);
+            //engine.linkCreationSource
         }
 
 
@@ -492,41 +501,44 @@ class MolviEngine {
         }*/
     }
 
+    startLinkCreationHtml() {
+        engine.linkCreationSource = [];
+        engine.unselectAtoms();
+        engine.controlMode = 'link'
+        engine.linkCreation();
+    }
+
     /**
      * Создание связи
      * @param {Array} ids массив id для создания связи [] или [id]
      */
-    linkCreation(ids){
-        "use strict";
-    
-        console.log(ids);
+    linkCreation(){
         // не выбрано ниодного атома
-        if (ids.length == 0) {
-            this.linkCreationSource = [];
-            
+        if (engine.linkCreationSource.length == 0) {
             engine.userMessage("Выберите атом #1");
-            return;
+
+        } else if(engine.linkCreationSource.length == 1) {
+            engine.userMessage("Выберите атом #2");
         }
     
         //ids содержит что-то
-        if (ids.length != 1) {
-            console.warn("Only array with length == 1 allowed");
-            return;
-        }
-        if (this.linkCreationSource.length == 0){
-            this.linkCreationSource.push(ids[0]);
-            engine.userMessage("Выберите атом #2");
-        } else if (this.linkCreationSource.length == 1){
-            this.linkCreationSource.push(ids[0]);
+        if (this.linkCreationSource.length == 2) {
             engine.userMessage();
-            var newLink = new WLink(this.linkCreationSource[0], this.linkCreationSource[1]),
-                p1 = atomGroup.children[newLink.from].position,
-                p2 = atomGroup.children[newLink.to].position,
-                linkLine = buildLine(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, linkMaterial);
-            addLink(newLink);
-            console.log(newLink);
-            console.log(atomGroup);
-            selectMode('none');
+            var atom1 = null,
+                atom2 = null;
+
+            doc.clusters.forEach(function (cluster) {
+                cluster.atomList.forEach(function (atom) {
+
+                })
+            })
+
+            var newLink = new Link(this.linkCreationSource[0], this.linkCreationSource[1]);
+            doc.links.push(newLink);
+
+            engine.controlMode ='none';
+            engine.buildHtmlFromDoc();
+            engine.build3DFromDoc();
         }
 
         
@@ -609,6 +621,42 @@ class MolviEngine {
         engine.build3DFromDoc();
     }
 
+    selectLinkById(id) {
+        doc.selectedLinkIds = [];
+        doc.selectedLinkIds.push(id);
+
+        engine.build3DFromDoc();
+        //engine.buildHtmlFromDoc();
+    }
+
+    selectLinkByIds(id1, id2) {
+        var thisLink = null;
+        doc.links.forEach(function (link) {
+            if (((link.from == id1) && (link.to == id2)) ||
+                ((link.fomr == id2) && (link.to == id1)))
+            {
+                thisLink = link;
+            }
+        });
+        if (thisLink != null) {
+            engine.selectAtomById(thisLink.id);
+        }
+    }
+
+    unselectLinks() {
+        doc.selectedLinkIds = [];
+    }
+
+    deleteLink(id4del) {
+        doc.links.forEach(function (link, indx) {
+            if (link.id === id4del) {
+                doc.links.splice(indx, 1);
+                link = null;
+            }
+        });
+        engine.build3DFromDoc();
+        engine.buildHtmlFromDoc();
+    }
 
     /**
      * Создание объектов для содержания информации об атомах

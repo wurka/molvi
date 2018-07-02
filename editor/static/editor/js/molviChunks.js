@@ -3,11 +3,11 @@
  */
 var Chunks = {
     link : `
-        <div class="link" id="link_0" onmouseover="highlightLink([ID])" onmouseout="highlightLink()">
+        <div class="link" id="link_0" onmouseover="engine.selectLinkById([ID])" onmouseout="engine.unselectLinks()">
             <div class='cell'>
                 <span>[FROM]</span><span> - </span><span>[TO]</span>
             </div>
-            <div class="deleteLink cell" title="delete link" onclick="deleteLink([ID])">x</div>
+            <div class="deleteLink cell" title="delete link" onclick="engine.deleteLink([ID])">x</div>
         </div>
     `,
     atom: `
