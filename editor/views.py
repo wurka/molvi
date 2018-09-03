@@ -2,8 +2,13 @@ from django.shortcuts import render
 from django.http import HttpResponse, Http404
 from .views_utils import *
 from .mathutils import rotate_by_deg
+from .models import Document, Link, Atom, Cluster, ClusterAtom
 import os
 import json
+from .geom import Point, Line, Plane
+from math import sqrt, pi
+from django.db.transaction import atomic
+from .geom import Quaternion, Point
 
 
 # Create your views here.
@@ -17,13 +22,19 @@ def open_file_dialog(request):
 
 def mol_file_data(file_name):
 	"""
-	Return json string, contains data from .mol file
+	Return Atom array, contains data from .mol file
 	with name <file_name>
 	:param file_name: name of .mol file
 	:return: json string
 	"""
 	ans = ""
 	atoms = list()
+
+	active_doc = None
+	try:
+		active_doc = Document.objects.get(is_active=True)
+	except Document.DoesNotExist:
+		pass
 
 	# чтение файла file_name
 	try:
@@ -75,7 +86,8 @@ def mol_file_data(file_name):
 				az = float(elems[3])
 				name = elems[4]
 				mass = int(elems[5])
-				new_atom = Atom(ax, ay, az, name, mass)
+				new_atom = Atom(x=ax, y=ay, z=az, name=name, mass=mass, document=active_doc)
+				new_atom.save()
 				atoms.append(new_atom)
 
 			except ValueError as ex:
@@ -85,8 +97,33 @@ def mol_file_data(file_name):
 		i += 1
 
 	# считывание из файла завершено заполнен список atoms
-	ans = atoms2json(atoms)
-	return ans
+	# ans = atoms2json(atoms)
+	# return ans
+
+	# вернём активный документ
+	return atoms
+
+
+def get_active_data_old(request):
+	adoc = Document.objects.get(is_active=True)
+	free_atoms = Atom.objects.filter(document=adoc)
+	clusters = Cluster.objects.filter(document=adoc)
+	atoms = [ClusterAtom.objects.get(claster=c).atom for c in clusters]
+
+
+	# чтение файла currentFile.txt
+	try:
+		# "./files/2Cl3NTh_mf_cc3_cub.mol"
+		path = os.path.abspath("editor/files/currentFile.txt")
+		with open(path, encoding="UTF-8") as f:
+			file_name = f.read()
+	except FileNotFoundError:
+		ans = "currentFile.txt not found on server"
+		# ans += str(os.listdir())
+		return HttpResponse(ans)
+	# обработка файла, указанного в currentFile.txt
+	ans = mol_file_data(file_name)
+	return HttpResponse(ans)
 
 
 def get_last_mol_file(request):
@@ -103,7 +140,7 @@ def get_last_mol_file(request):
 		# ans += str(os.listdir())
 		return HttpResponse(ans)
 	# обработка файла, указанного в currentFile.txt
-	ans = mol_file_data(file_name)
+	ans = json.dumps(mol_file_data(file_name))
 	return HttpResponse(ans)
 
 
@@ -113,7 +150,8 @@ def get_mol_file(request):
 	file_name = request.GET['filename']
 	mol_dir = os.path.abspath(os.path.join("editor", "files", "mols"))
 	file_name = os.path.join(mol_dir, file_name)
-	ans = mol_file_data(file_name)
+	atom_list = mol_file_data(file_name)
+
 	return HttpResponse(ans)
 
 
@@ -146,8 +184,17 @@ def save_document(request):
 
 
 def get_documents(request):
-	doc_dir = os.path.abspath(os.path.join("editor", "files", "documents"))
-	ans = json.dumps(os.listdir(doc_dir))
+	# doc_dir = os.path.abspath(os.path.join("editor", "files", "documents"))
+	# ans = json.dumps(os.listdir(doc_dir))
+	# return HttpResponse(ans)
+	docs = Document.objects.all()
+	doc_list = list()
+	try:
+		for doc in docs:
+			doc_list.append({"id": doc.id, "name": doc.name})
+		ans = json.dumps(doc_list)
+	except Exception as e:
+		return HttpResponse("Error: " + str(e), status=500)
 	return HttpResponse(ans)
 
 
@@ -169,6 +216,60 @@ def get_document(request):
 			return HttpResponse(content)
 	except IOError as ex:
 		return Http404("Error while file reading: " + str(ex))
+
+
+def rotate_cluster_around_link(request):
+	must_be = ("link", "origin-atom", "degrees")
+	for must in must_be:
+		if must not in request.GET:
+			return HttpResponse("there is no parameter: "+must, status=500)
+
+	lid = int(request.GET["link"])
+	origin_atom_id = int(request.GET["origin-atom"])
+	degrees = float(request.GET["degrees"])
+
+	cluster = None
+	link = Link.objects.get(id=lid)
+	oa = Atom.objects.get(id=origin_atom_id)
+	active_doc = Document.objects.get(is_active=True)
+	clusters = Cluster.objects.filter(document=active_doc)
+
+	for c in clusters:
+		catoms = ClusterAtom.objects.filter(cluster=c)
+		for cc in catoms:
+			if cc.atom.id == origin_atom_id:
+				cluster = c
+				break
+
+	if cluster is None:
+		return HttpResponse("cluster not found", status=500)
+
+	if link.atom1.id == origin_atom_id:
+		a_from = link.atom1
+		a_to = link.atom2
+	elif link.atom2.id == origin_atom_id:
+		a_from = link.atom2
+		a_to = link.atom1
+	else:
+		return HttpResponse("wrong origin atom", status=500)
+
+	vx, vy, vz = a_to.x - a_from.x, a_to.y - a_from.y, a_to.z - a_from.z
+
+	quat = Quaternion.create_quaternion(vx, vy, vz, degrees/180.0*pi)
+	quat.normalize()
+
+	catoms = ClusterAtom.objects.filter(cluster=cluster)
+	atoms = [catom.atom for catom in catoms]
+
+	for atom in atoms:
+		point = Point(atom.x, atom.y, atom.z)
+		point = point.translate(-oa.x, -oa.y, -oa.z)
+		point = point.rotate_by_quaternion(quat)
+		point = point.translate(oa.x, oa.y, oa.z)
+		atom.x, atom.y, atom.z = point.X, point.Y, point.Z
+		atom.save()
+
+	return HttpResponse("OK")
 
 
 def rotate_cluster(request):
@@ -200,3 +301,188 @@ def rotate_cluster(request):
 
 	ans = json.dumps(newpoints)
 	return HttpResponse(ans)
+
+
+# создание нового документа
+def create_document(request):
+	creator = "Wurka"
+	if "creator" in request.POST:
+		creator = request.POST["creator"]
+
+	details = ""
+	if "details" in request.POST:
+		details = request.POST["details"]
+
+	name = "Новый документ"
+	if "name" in request.POST:
+		name = request.POST["name"]
+
+	new_document = Document.objects.create(name=name, details=details, creator=creator)
+	return HttpResponse(new_document.id)
+
+
+# получить содержание активного документа
+def get_active_data(request):
+	try:
+		sdoc = Document.objects.get(is_active=True)
+	except Document.DoesNotExist:
+		sdoc = Document.objects.create(creator="noname", name="new document", is_active=True)
+
+	clusters = list()
+	sclusters = Cluster.objects.filter(document=sdoc)
+	for cluster in sclusters:
+		ca = ClusterAtom.objects.filter(cluster=cluster)
+
+		new_cluster = {
+			"id": cluster.id,
+			"caption": cluster.caption,
+			"atoms": [atom.atom.id for atom in ca]
+		}
+		clusters.append(new_cluster)
+
+	slinks = Link.objects.filter(document=sdoc)
+	links = [{
+		"id": slink.id, "atom1": slink.atom1.id, "atom2": slink.atom2.id,
+		"length": slink.get_length()
+	} for slink in slinks]
+	bdatoms = Atom.objects.filter(document=sdoc)
+	atoms = [{
+		"id": a.id, "x": a.x, "y": a.y, "z": a.z, "name": a.name, "color": a.color, "radius": a.radius
+	} for a in bdatoms]
+
+	adoc = {
+		"name": sdoc.name,
+		"clusters": clusters,
+		"links": links,
+		"atoms": atoms
+	}
+
+	return HttpResponse(json.dumps(adoc))
+
+
+def open_mol_file(request):
+	if "filename" not in request.GET:
+		return HttpResponse("there si no parameter: filename", status=500)
+
+	clear = False
+	if 'clear' in request.GET:
+		clear = json.loads(request.GET["clear"])
+
+	file_name = request.GET['filename']
+	mol_dir = os.path.abspath(os.path.join("editor", "files", "mols"))
+	file_name = os.path.join(mol_dir, file_name)
+	atom_list = mol_file_data(file_name)
+
+	active_doc = Document.objects.get(is_active=True)
+	if clear:
+		Link.objects.filter(document=active_doc).delete()
+		Cluster.objects.filter(document=active_doc).delete()
+		Atom.objects.filter(document=active_doc).delete()
+	mol_cluster = Cluster.objects.create(document=active_doc, caption="mol-file")
+	for atom in atom_list:
+		atom.save()
+		ClusterAtom.objects.create(cluster=mol_cluster, atom=atom)
+
+	return get_active_data(request)
+
+
+def save_links(request):
+	if "links" not in request.GET:
+		return HttpResponse("there is no parameter links", status=500)
+
+	clear = False
+	if "clear" in request.GET:
+		clear = bool(request.GET)
+
+	active_doc = Document.objects.get(is_active=True)
+
+	if clear:
+		Link.objects.filter(document=active_doc).delete()
+
+	links = json.loads(request.GET["links"])
+	for link in links:
+		atom1 = Atom.objects.get(id=link["from"], document=active_doc)
+		atom2 = Atom.objects.get(id=link["to"], document=active_doc)
+		Link.objects.create(document=active_doc, atom1=atom1, atom2=atom2)
+
+	return HttpResponse("OK")
+
+
+def edit_cluster_move(request):
+	must_be = ("cluster", "x", "y", "z")
+	for must in must_be:
+		if must not in request.GET:
+			return HttpResponse("there is no parameter: "+must, status=500)
+
+	active_doc = Document.objects.get(is_active=True)
+	cid = int(request.GET["cluster"])
+	x = float(request.GET["x"])
+	y = float(request.GET["y"])
+	z = float(request.GET["z"])
+	cluster = Cluster.objects.get(id=cid)
+	catoms = ClusterAtom.objects.filter(cluster=cluster)
+	atoms = [catom.atom for catom in catoms]
+	for atom in atoms:
+		atom.x += x
+		atom.y += y
+		atom.z += z
+		atom.save()
+
+	return HttpResponse("OK")
+
+
+def get_document_object(request):
+	if "id" not in request.POST:
+		return HttpResponse("there is no id parameter", status=500)
+
+
+# @atomic
+def edit_link_set_length(request):
+	for must in ("link", "length"):
+		if must not in request.GET:
+			return HttpResponse("there is no parameter: " + must, status=500)
+
+	link = Link.objects.get(id=int(request.GET["link"]))
+	atom1 = link.atom1
+	atom2 = link.atom2
+	document = link.atom1.document
+	all_atoms = Atom.objects.filter(document=document)
+
+	point1 = Point(x=atom1.x, y=atom1.y, z=atom1.z)
+	point2 = Point(x=atom2.x, y=atom2.y, z=atom2.z)
+	new_distance = float(request.GET["length"])
+	old_distance = point1.distance_to(point2)
+	delta = (new_distance - old_distance)/2.0  # двигаем в обе стороны от точки
+	middle = Point(
+		x=(atom1.x+atom2.x)/2,
+		y=(atom1.y+atom2.y)/2,
+		z=(atom1.z+atom2.z)/2
+	)
+	line = Line.from_points(point1, middle)
+	plane = Plane.from_line_and_point(line, middle)
+	points = [Point(x=atom.x, y=atom.y, z=atom.z) for atom in all_atoms]
+	on_top = [point.on_top(plane) for point in points]
+	devider = sqrt(line.kx**2 + line.ky**2 + line.kz**2)
+	movex = delta * line.kx / devider
+	movey = delta * line.ky / devider
+	movez = delta * line.kz / devider
+
+	for indx, atom in enumerate(all_atoms):
+		if on_top[indx]:
+			atom.x += movex
+			atom.y += movey
+			atom.z += movez
+		else:
+			atom.x -= movex
+			atom.y -= movey
+			atom.z -= movez
+		atom.save()
+
+	return HttpResponse("OK")
+
+
+
+
+
+
+

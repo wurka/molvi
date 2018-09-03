@@ -9,13 +9,13 @@ def dprint(message):
 		return message
 
 
-class Atom:
-	def __init__(self, x, y, z, name, mass):
-		self.x = x
-		self.y = y
-		self.z = z
-		self.name = name
-		self.mass = mass
+# class Atom:
+# 	def __init__(self, x, y, z, name, mass):
+# 		self.x = x
+# 		self.y = y
+# 		self.z = z
+# 		self.name = name
+# 		self.mass = mass
 
 
 atomChunk = """
@@ -34,6 +34,7 @@ def atoms2json(atom_list):
 	ans = ""
 	index = 0
 	json_string = ""
+	anslist = list()
 	for atom in atom_list:
 		new_txt = atomChunk.replace("[[id]]", str(index))
 		new_txt = new_txt.replace("[[x]]", str(atom.x))
@@ -42,11 +43,14 @@ def atoms2json(atom_list):
 		new_txt = new_txt.replace("[[name]]", str(atom.name))
 		ans += new_txt
 		index += 1
-		if index == 1:
-			json_string += json.dumps(atom.__dict__)
-		else:
-			json_string += "," + json.dumps(atom.__dict__)
+		anslist.append({
+			"id": atom.id,
+			"x": atom.x,
+			"y": atom.y,
+			"z": atom.z,
+			"name": atom.name
+		})
 
 	# return ans
 
-	return "[" + json_string + "]"
+	return json.dumps(anslist)

@@ -14,7 +14,7 @@
     .layout .modeIcon #traceRange {
       position: absolute;
       width: 30px;
-      margin: 47px 0px 0px 31px; }
+      margin: 47px 0 0 31px; }
   .layout .iconImage {
     position: absolute;
     margin: 3px; }
@@ -34,7 +34,7 @@
       position: absolute;
       width: 600px;
       text-align: center;
-      margin: 80px 0px 0px 0px;
+      margin: 80px 0 0 0;
       color: #00ff00;
       font-size: 30px; }
       .layout .body #infoMessageField #infoCloseButton {
@@ -52,52 +52,44 @@
       width: 600px;
       box-sizing: border-box;
       text-align: center;
-      margin: 5px 0px 0px 0px; }
+      margin: 5px 0 0 0; }
     .layout .body .userControls {
       position: absolute;
       width: 600px;
       text-align: right; }
       .layout .body .userControls img {
-        margin: 5px 0px 0px 0px;
+        margin: 5px 0 0 0;
         border: 2px solid transparent;
         border-radius: 5px; }
         .layout .body .userControls img:hover {
           border-color: skyblue; }
       .layout .body .userControls .unselectedIcon {
         display: none; }
-  .layout .atomsView {
-    width: 200px;
-    box-sizing: border-box;
-    height: 300px;
-    overflow: scroll; }
-    .layout .atomsView .atomView {
-      padding: 5px;
-      margin: 1px 0px 0px 10px;
-      cursor: default;
-      border: 1px solid transparent; }
-      .layout .atomsView .atomView .id {
-        color: gray; }
-      .layout .atomsView .atomView:hover {
-        border: 1px solid #000;
-        box-sizing: border-box; }
-      .layout .atomsView .atomView div {
-        display: inline-block; }
-      .layout .atomsView .atomView .devider {
-        display: block; }
-    .layout .atomsView .selected {
+  .layout .atomsView .atomView {
+    padding: 5px;
+    margin: 1px 0 0 10px;
+    cursor: default;
+    border: 1px solid transparent; }
+    .layout .atomsView .atomView .id {
+      color: gray; }
+    .layout .atomsView .atomView:hover {
+      border: 1px solid #000;
+      box-sizing: border-box; }
+    .layout .atomsView .atomView div {
+      display: inline-block; }
+    .layout .atomsView .atomView .devider {
+      display: block; }
+  .layout .atomsView .selected {
+    background: lightsteelblue; }
+  .layout .atomsView .moleculaView .title u {
+    cursor: default; }
+    .layout .atomsView .moleculaView .title u:hover {
+      background: skyblue; }
+  .layout .atomsView .move {
+    display: inline-block;
+    cursor: default; }
+    .layout .atomsView .move:hover {
       background: lightsteelblue; }
-    .layout .atomsView .moleculaView .title u {
-      cursor: default; }
-      .layout .atomsView .moleculaView .title u:hover {
-        background: skyblue; }
-    .layout .atomsView .move {
-      display: inline-block;
-      cursor: default; }
-      .layout .atomsView .move:hover {
-        background: lightsteelblue; }
-  .layout .linksHolder {
-    height: 300px;
-    overflow-y: scroll; }
   .layout .linksView {
     display: table;
     width: 100%;
@@ -115,7 +107,7 @@
       .layout .linksView .link .linkContent {
         display: table-cell; }
     .layout .linksView .deleteLink {
-      margin-left: 0px;
+      margin-left: 0;
       border: 1px solid transparent;
       width: 20px;
       height: 20px;
@@ -127,7 +119,7 @@
         background: lightskyblue; }
 
 .buttons {
-  margin: 5px 0px 5px 0px; }
+  margin: 5px 0 5px 0; }
 
 .openFileDialog {
   border: 1px solid black;
@@ -142,12 +134,12 @@
     height: 300px;
     overflow-y: scroll;
     overflow-x: auto;
-    margin: 10px 0px 10px 25px; }
+    margin: 10px 0 10px 25px; }
   .openFileDialog .title {
     font-size: 1.5em;
-    margin: 30px 0px 0px 20px; }
+    margin: 30px 0 0 20px; }
   .openFileDialog .caption {
-    margin: 10px 0px 0px 10px;
+    margin: 10px 0 0 10px;
     text-align: center; }
   .openFileDialog .file {
     margin: 4px 10px 4px 10px;
@@ -161,34 +153,34 @@
     text-align: right;
     margin-bottom: 20px; }
     .openFileDialog .buttons .mybutton:last-child {
-      margin: 0px 20px 0px 10px; }
+      margin: 0 20px 0 10px; }
 
 #saveFileDialog {
-  box-shadow: 0px 0px 5px skyblue;
+  box-shadow: 0 0 5px skyblue;
   position: absolute;
   background: white;
   width: 600px;
   z-index: 1;
-  margin: 150px 0px 0px 50px;
+  margin: 150px 0 0 50px;
   padding: 10px;
   display: none; }
   #saveFileDialog input {
     width: calc(100% - 40px);
     display: block;
-    margin: 0px 20px 0px 20px; }
+    margin: 0 20px 0 20px; }
   #saveFileDialog .title {
     font-size: 1.5em;
-    margin: 20px 0px 5px 20px; }
+    margin: 20px 0 5px 20px; }
   #saveFileDialog .buttons {
     text-align: right; }
     #saveFileDialog .buttons .mybutton:last-child {
-      margin: 0px 20px 0px 10px; }
+      margin: 0 20px 0 10px; }
 
 #moleculaMoveControls {
   border: 1px solid skyblue;
   background: white;
   position: absolute;
-  margin: 50px 0px 0px 160px;
+  margin: 50px 0 0 160px;
   display: none; }
   #moleculaMoveControls .hidden {
     display: none; }
@@ -201,17 +193,17 @@
     #moleculaMoveControls .inputLine span {
       display: inline-block;
       width: 15px;
-      margin: 0px 0px 0px 5px; }
+      margin: 0 0 0 5px; }
   #moleculaMoveControls .buttons {
     text-align: right;
-    margin: 0px 50px 15px 0px; }
+    margin: 0 50px 15px 0; }
     #moleculaMoveControls .buttons .button {
       display: inline-block;
       box-sizing: border-box;
       border: 1px solid black;
       width: 70px;
       text-align: center;
-      padding: 3px 0px 3px 0px;
+      padding: 3px 0 3px 0;
       cursor: default; }
       #moleculaMoveControls .buttons .button:hover {
         background: skyblue; }
@@ -221,7 +213,7 @@
   box-sizing: border-box;
   width: 70px;
   text-align: center;
-  padding: 3px 0px 3px 0px;
+  padding: 3px 0 3px 0;
   cursor: default; }
   .mybutton:hover {
     background: skyblue; }
@@ -235,14 +227,14 @@
   user-select: none; }
 
 .moveActions {
-  margin: 0px 10px 5px 10px; }
+  margin: 0 10px 5px 10px; }
   .moveActions .moveAction {
     background: pink;
     display: inline-block;
     padding: 3px 10px 3px 10px;
     cursor: default;
     border: 1px solid transparent;
-    margin: 0px 0px 0px 5px; }
+    margin: 0 0 0 5px; }
     .moveActions .moveAction:hover {
       background: lightskyblue; }
   .moveActions .selected {
@@ -252,8 +244,8 @@
   width: auto;
   background: white;
   position: absolute;
-  margin: 100px 0px 0px 100px;
-  box-shadow: 0px 0px 10px white;
+  margin: 100px 0 0 100px;
+  box-shadow: 0 0 10px white;
   display: none; }
   #transformRotate .title {
     font-size: 1.5em;
@@ -262,8 +254,82 @@
     margin: 5px 15px 5px 15px; }
     #transformRotate div input {
       display: inline-block;
-      margin: 0px 0px 0px 5px; }
+      margin: 0 0 0 5px; }
   #transformRotate .buttons {
     text-align: right; }
+
+.viewPanel {
+  height: 561px;
+  width: 200px;
+  overflow: scroll;
+  box-sizing: border-box;
+  display: none; }
+
+.selectors {
+  font-size: 0; }
+  .selectors .selector {
+    display: inline-block;
+    margin: 5px 5px 5px 0;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    font-size: 14px; }
+    .selectors .selector:hover {
+      background: lightskyblue; }
+  .selectors .checked {
+    border: 1px solid black; }
+
+.disabled {
+  color: gray;
+  pointer-events: none; }
+
+#linkChangeLengthControls {
+  position: absolute;
+  margin: 200px 0 0 50px;
+  background: white;
+  border: 1px solid #000;
+  padding: 50px;
+  display: none; }
+  #linkChangeLengthControls .title {
+    font-size: 1.4em; }
+  #linkChangeLengthControls .line {
+    margin-top: 10px; }
+    #linkChangeLengthControls .line .name {
+      width: 130px;
+      display: inline-block; }
+    #linkChangeLengthControls .line .value {
+      display: inline-block; }
+  #linkChangeLengthControls .flat-button {
+    width: 100px; }
+  #linkChangeLengthControls .buttons {
+    margin-top: 10px;
+    text-align: right; }
+
+.flat-button {
+  display: inline-block;
+  padding: 3px;
+  box-sizing: border-box;
+  border: 1px solid #000;
+  text-align: center;
+  cursor: default; }
+  .flat-button:hover {
+    background: lightskyblue; }
+
+#linkRotationPanel .name {
+  display: inline-block; }
+#linkRotationPanel .value {
+  display: inline-block; }
+  #linkRotationPanel .value input {
+    width: 30px; }
+#linkRotationPanel .dont-move {
+  display: inline-block;
+  border: 1px solid transparent;
+  width: 20px;
+  height: 20px;
+  cursor: default;
+  user-select: none; }
+  #linkRotationPanel .dont-move:hover {
+    background: lightskyblue; }
+#linkRotationPanel .selected {
+  border: 1px solid black; }
 
 /*# sourceMappingURL=molvi.css.map */

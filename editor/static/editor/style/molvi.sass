@@ -1,286 +1,354 @@
 .layout
-    .table
-        display: table
-        vertical-align: top
-    .row
-        display: table-row
-    .cell
-        display: table-cell
-        vertical-align: top
+  .table
+    display: table
+    vertical-align: top
+  .row
+    display: table-row
+  .cell
+    display: table-cell
+    vertical-align: top
 
-    //background: pink
-    width: 800px
+  //background: pink
+  width: 800px
+  margin: auto
+  //text-align: center
+  .modeIcon
+    display: inline
+    #traceRange
+      position: absolute
+      width: 30px
+      margin: 47px 0 0 31px
+  .iconImage
+    position: absolute
+    margin: 3px
+  .header
+    width: 100%
+    border: 1px solid #000
+    padding: 20px
+    box-sizing: border-box
+    font-size: 24px
+    vertical-align: middle
+    text-align: center
+  .body
+    width: 100%
     margin: auto
-    //text-align: center
-    .modeIcon
-        display: inline
-        #traceRange
-            position: absolute
-            width: 30px
-            margin: 47px 0px 0px 31px
-    .iconImage
-        position: absolute
-        margin: 3px
-    .header
-        width: 100%
-        border: 1px solid #000
-        padding: 20px
-        box-sizing: border-box
-        font-size: 24px
-        vertical-align: middle
-        text-align: center
-    .body
-        width: 100%
-        margin: auto
-        background: #f5f5f5
-        #infoMessageField
-            position: absolute
-            width: 600px
-            text-align: center
-            margin: 80px 0px 0px 0px
-            color: #00ff00
-            font-size: 30px
-            #infoCloseButton
-                font-size: 12px
-                text-align: right
-                cursor: pointer
-                text-decoration: underline
-            #infoMessage
-                background: #0F0F0F
-                border: 1px solid white
-                display: inline-block
-                padding: 5px 10px 5px 10px
-                border-radius: 5px
-        .display
-            width: 600px
-            box-sizing: border-box
-            //padding: 10px
-            text-align: center
-            //background: pink
-            margin: 5px 0px 0px 0px
-            //margin-left: calc(800px - 600px)
-        .userControls
-            //background: pink
-            position: absolute
-            width: 600px
-            text-align: right
-            img
-                margin: 5px 0px 0px 0px
-                border: 2px solid transparent
-                border-radius: 5px
-                &:hover
-                    border-color: skyblue
-            .unselectedIcon
-                display: none
-                    
+    background: #f5f5f5
+    #infoMessageField
+      position: absolute
+      width: 600px
+      text-align: center
+      margin: 80px 0 0 0
+      color: #00ff00
+      font-size: 30px
+      #infoCloseButton
+        font-size: 12px
+        text-align: right
+        cursor: pointer
+        text-decoration: underline
+      #infoMessage
+        background: #0F0F0F
+        border: 1px solid white
+        display: inline-block
+        padding: 5px 10px 5px 10px
+        border-radius: 5px
+    .display
+      width: 600px
+      box-sizing: border-box
+      //padding: 10px
+      text-align: center
+      //background: pink
+      margin: 5px 0 0 0
+      //margin-left: calc(800px - 600px)
+    .userControls
+      //background: pink
+      position: absolute
+      width: 600px
+      text-align: right
+      img
+        margin: 5px 0 0 0
+        border: 2px solid transparent
+        border-radius: 5px
+        &:hover
+          border-color: skyblue
+      .unselectedIcon
+        display: none
+          
 
-    .atomsView
-        //background: blue
-        width: 200px
+  .atomsView
+    .atomView
+      //background: pink
+      padding: 5px
+      margin: 1px 0 0 10px
+      cursor: default
+      border: 1px solid transparent
+      .id
+        color: gray
+      &:hover
+        border: 1px solid #000
         box-sizing: border-box
-        height: 300px
-        overflow: scroll
-        .atomView
-            //background: pink
-            padding: 5px
-            margin: 1px 0px 0px 10px
-            cursor: default
-            border: 1px solid transparent
-            .id
-                color: gray
-            &:hover
-                border: 1px solid #000
-                box-sizing: border-box
-            div
-                display: inline-block
-            .devider
-                display: block
-        .selected
-            background: lightsteelblue
-        .moleculaView            
-            .title
-                u
-                    cursor: default
-                    &:hover
-                        background: skyblue
-        .move
-            display: inline-block
-            cursor: default
-            &:hover
-                background: lightsteelblue
-    .linksHolder
-        height: 300px
-        overflow-y: scroll
-    .linksView
-        display: table
-        width: 100%
-        cursor: default
-        .link
-            display: table-row
-            border: 1px solid transparent
-            padding: 1px 1px 1px 6px
-            
-            &:hover
-                background: lightsteelblue
-                border: 1px solid #000
-            span
-                min-height: 20px
-                display: inline-block
-            .linkContent
-                display: table-cell
-        .deleteLink
-            margin-left: 0px
-            border: 1px solid transparent
-            width: 20px
-            height: 20px
-            box-sizing: border-box
-            text-align: center
-            cursor: default
-            &:hover
-                border: 1px solid #000
-                background: lightskyblue
-    
+      div
+        display: inline-block
+      .devider
+        display: block
+    .selected
+      background: lightsteelblue
+    .moleculaView      
+      .title
+        u
+          cursor: default
+          &:hover
+            background: skyblue
+    .move
+      display: inline-block
+      cursor: default
+      &:hover
+        background: lightsteelblue
+  .linksView
+    display: table
+    width: 100%
+    cursor: default
+    .link
+      display: table-row
+      border: 1px solid transparent
+      padding: 1px 1px 1px 6px
+      
+      &:hover
+        background: lightsteelblue
+        border: 1px solid #000
+      span
+        min-height: 20px
+        display: inline-block
+      .linkContent
+        display: table-cell
+    .deleteLink
+      margin-left: 0
+      border: 1px solid transparent
+      width: 20px
+      height: 20px
+      box-sizing: border-box
+      text-align: center
+      cursor: default
+      &:hover
+        border: 1px solid #000
+        background: lightskyblue
+  
 .buttons
-    margin: 5px 0px 5px 0px
+  margin: 5px 0 5px 0
 
 .openFileDialog
-    border: 1px solid black
-    border-radius: 5px
-    width: 500px
-    background: white
-    position: absolute
-    margin: 10px
-    z-index: 1
-    display: none
-    .fileView
-        height: 300px
-        overflow-y: scroll
-        overflow-x: auto
-        margin: 10px 0px 10px 25px
-    .title
-        font-size: 1.5em
-        margin: 30px 0px 0px 20px
-    .caption
-        margin: 10px 0px 0px 10px
-        text-align: center
-    .file
-        margin: 4px 10px 4px 10px
-        cursor: default
-    .selected
-        background: black
-        color: white
-    .file:hover
-        background: skyblue
-    .buttons
-        text-align: right
-        margin-bottom: 20px
-        .mybutton:last-child
-            margin: 0px 20px 0px 10px
+  border: 1px solid black
+  border-radius: 5px
+  width: 500px
+  background: white
+  position: absolute
+  margin: 10px
+  z-index: 1
+  display: none
+  .fileView
+    height: 300px
+    overflow-y: scroll
+    overflow-x: auto
+    margin: 10px 0 10px 25px
+  .title
+    font-size: 1.5em
+    margin: 30px 0 0 20px
+  .caption
+    margin: 10px 0 0 10px
+    text-align: center
+  .file
+    margin: 4px 10px 4px 10px
+    cursor: default
+  .selected
+    background: black
+    color: white
+  .file:hover
+    background: skyblue
+  .buttons
+    text-align: right
+    margin-bottom: 20px
+    .mybutton:last-child
+      margin: 0 20px 0 10px
 
 
 #saveFileDialog
-    box-shadow: 0px 0px 5px skyblue
-    position: absolute
-    background: white
-    width: 600px
-    z-index: 1
-    margin: 150px 0px 0px 50px
-    padding: 10px
-    display: none
-    input
-        width: calc(100% - 40px)
-        display: block
-        margin: 0px 20px 0px 20px
-    .title
-        font-size: 1.5em
-        margin: 20px 0px 5px 20px
-    .buttons
-        text-align: right
-        .mybutton:last-child
-            margin: 0px 20px 0px 10px
+  box-shadow: 0 0 5px skyblue
+  position: absolute
+  background: white
+  width: 600px
+  z-index: 1
+  margin: 150px 0 0 50px
+  padding: 10px
+  display: none
+  input
+    width: calc(100% - 40px)
+    display: block
+    margin: 0 20px 0 20px
+  .title
+    font-size: 1.5em
+    margin: 20px 0 5px 20px
+  .buttons
+    text-align: right
+    .mybutton:last-child
+      margin: 0 20px 0 10px
 
 
 #moleculaMoveControls
-    border: 1px solid skyblue
-    background: white
-    position: absolute
-    margin: 50px 0px 0px 160px
+  border: 1px solid skyblue
+  background: white
+  position: absolute
+  margin: 50px 0 0 160px
+  display: none
+  .hidden
     display: none
-    .hidden
-        display: none
-    
-    .title
-        margin: 20px 5px 5px 5px
-        text-align: center
-        font-size: 1.2em
-    .inputLine
-        margin: 10px 50px 10px 50px
-        span
-            display: inline-block
-            width: 15px
-            margin: 0px 0px 0px 5px
-    .buttons
-        text-align: right
-        margin: 0px 50px 15px 0px
-        .button
-            display: inline-block
-            box-sizing: border-box
-            border: 1px solid black
-            width: 70px
-            text-align: center
-            padding: 3px 0px 3px 0px
-            cursor: default
-            &:hover
-                background: skyblue
+  
+  .title
+    margin: 20px 5px 5px 5px
+    text-align: center
+    font-size: 1.2em
+  .inputLine
+    margin: 10px 50px 10px 50px
+    span
+      display: inline-block
+      width: 15px
+      margin: 0 0 0 5px
+  .buttons
+    text-align: right
+    margin: 0 50px 15px 0
+    .button
+      display: inline-block
+      box-sizing: border-box
+      border: 1px solid black
+      width: 70px
+      text-align: center
+      padding: 3px 0 3px 0
+      cursor: default
+      &:hover
+        background: skyblue
 
 
 .mybutton
-    display: inline-block
-    box-sizing: border-box
-    //border: 1px solid black
-    width: 70px
-    text-align: center
-    padding: 3px 0px 3px 0px
-    cursor: default
-    &:hover
-        background: skyblue
+  display: inline-block
+  box-sizing: border-box
+  //border: 1px solid black
+  width: 70px
+  text-align: center
+  padding: 3px 0 3px 0
+  cursor: default
+  &:hover
+    background: skyblue
 
 .noselect
-    -webkit-touch-callout: none /* iOS Safari */
-    -webkit-user-select: none /* Safari */
-    -khtml-user-select: none /* Konqueror HTML */
-    -moz-user-select: none /* Firefox */
-    -ms-user-select: none /* Internet Explorer/Edge */
-    user-select: none /* Non-prefixed version, currently supported by Chrome and Opera */
+  -webkit-touch-callout: none /* iOS Safari */
+  -webkit-user-select: none /* Safari */
+  -khtml-user-select: none /* Konqueror HTML */
+  -moz-user-select: none /* Firefox */
+  -ms-user-select: none /* Internet Explorer/Edge */
+  user-select: none /* Non-prefixed version, currently supported by Chrome and Opera */
 
 .moveActions
-    margin: 0px 10px 5px 10px
-    .moveAction
-        background: pink
-        display: inline-block
-        padding: 3px 10px 3px 10px
-        cursor: default
-        border: 1px solid transparent
-        margin: 0px 0px 0px 5px
-        &:hover
-            background: lightskyblue
-    .selected
-        border: 1px solid black
+  margin: 0 10px 5px 10px
+  .moveAction
+    background: pink
+    display: inline-block
+    padding: 3px 10px 3px 10px
+    cursor: default
+    border: 1px solid transparent
+    margin: 0 0 0 5px
+    &:hover
+      background: lightskyblue
+  .selected
+    border: 1px solid black
 
 #transformRotate
-    width: auto
-    background: white
-    position: absolute
-    margin: 100px 0px 0px 100px
-    box-shadow: 0px 0px 10px white
-    display: none
-    .title
-        font-size: 1.5em
-        margin: 10px 10px 5px 10px
-    div
-        margin: 5px 15px 5px 15px
-        input
-            display: inline-block
-            margin: 0px 0px 0px 5px
-    .buttons
-        text-align: right
+  width: auto
+  background: white
+  position: absolute
+  margin: 100px 0 0 100px
+  box-shadow: 0 0 10px white
+  display: none
+  .title
+    font-size: 1.5em
+    margin: 10px 10px 5px 10px
+  div
+    margin: 5px 15px 5px 15px
+    input
+      display: inline-block
+      margin: 0 0 0 5px
+  .buttons
+    text-align: right
+
+.viewPanel
+  height: 561px
+  width: 200px
+  overflow: scroll
+  box-sizing: border-box
+  display: none
+
+.selectors
+  font-size: 0
+  .selector
+    display: inline-block
+    margin: 5px 5px 5px 0
+    box-sizing: border-box
+    border: 1px solid transparent
+    font-size: 14px
+    &:hover
+      background: lightskyblue
+  .checked
+    border: 1px solid black
+
+.disabled
+  color: gray
+  pointer-events: none
+
+#linkChangeLengthControls
+  position: absolute
+  margin: 200px 0 0 50px
+  background: white
+  border: 1px solid #000
+  padding: 50px
+  display: none
+  .title
+    font-size: 1.4em
+  .line
+    margin-top: 10px
+    .name
+      width: 130px
+      display: inline-block
+    .value
+      display: inline-block
+  .flat-button
+    width: 100px
+  .buttons
+    margin-top: 10px
+    text-align: right
+
+.flat-button
+  display: inline-block
+  padding: 3px
+  box-sizing: border-box
+  border: 1px solid #000
+  text-align: center
+  cursor: default
+  &:hover
+    background: lightskyblue
+
+
+#linkRotationPanel
+  .name
+    display: inline-block
+  .value
+    display: inline-block
+    input
+      width: 30px
+  .dont-move
+    display: inline-block
+    border: 1px solid transparent
+    width: 20px
+    height: 20px
+    cursor: default
+    user-select: none
+    &:hover
+      background: lightskyblue
+  .selected
+    border: 1px solid black

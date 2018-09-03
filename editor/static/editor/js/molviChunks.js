@@ -7,11 +7,13 @@ var Chunks = {
             <div class='cell'>
                 <span>[FROM]</span><span> - </span><span>[TO]</span>
             </div>
+            <div class="change-length cell" onclick="openChangeLinkLengthPanel([ID], [length])"><img src="/static/editor/images/change-length.png" alt="cl.png"></div>
+            <div class="change-length cell" onclick="openLinkRotationPanel([ID], [FROM], [TO])"><img src="/static/editor/images/link-rotation-20.png" alt="lr.png"></div>
             <div class="deleteLink cell" title="delete link" onclick="engine.deleteLink([ID])">x</div>
         </div>
     `,
     atom: `
-        <div class="atomView" onclick="selectAtom([[id]])" id="atomView_[[id]]">
+        <div class="atomView" onclick="engine.selectAtomById([[id]])" id="atomView_[[id]]">
             <div class="id">[[id]]: </div>
             <div class="name">[[name]]</div>
             <div class="devider"></div>

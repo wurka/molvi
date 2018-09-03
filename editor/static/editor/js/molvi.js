@@ -230,6 +230,7 @@ class WLink {
     constructor(from, to){
         this.from = from;
         this.to = to;
+        this.length = 0;
     }
 }
 

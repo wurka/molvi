@@ -6,8 +6,8 @@
 class Settings {
     constructor() {
         this.openFileUrl = "/molvi/server/open-file-dialog";
-        this.loadActiveFileUrl = "/molvi/get-last-mol-file";
-        this.loadMolFileUrl = "/molvi/get-mol-file";
+        this.loadActiveFileUrl = "/molvi/get-active-data";
+        this.loadMolFileUrl = "/molvi/open-mol-file";
         this.loadDocumentUrl = "/molvi/get-document";
         this.saveDocumentToServerUrl = "/molvi/save-document";
         this.sphereDetalisation = 20;  // количество полигонов при отрисовке сферических объектов
@@ -39,7 +39,7 @@ class Atom {
         this.color = "#ff0000";  //цвет атома
         //this.selected = false;  //выбран ли атом
         this.mass = 0;
-        this.id = getId();
+        //this.id = getId();
     }
 }
 
@@ -50,7 +50,7 @@ class Cluster {
     constructor() {
         this.atomList = [];
         this.caption = "noname custler";
-        this.id = getId();
+        //this.id = getId();
     }
 }
 
@@ -59,7 +59,7 @@ class Cluster {
  */
 class Link {
     constructor(fromId, toId) {
-        this.id = getId();
+        //this.id = getId();
         this.from = fromId;
         this.to = toId;
     }
@@ -99,9 +99,15 @@ class MolviEngine {
                     htmlChunk = "<div class=\"file\" id='[+id]' onclick='$(\"#openFIleDialog>.fileView>.file\").removeClass(\"selected\"); $(this).toggleClass(\"selected\")' ondblclick='$(\"#openFileDialog .mybutton:first-child\").click()'>[+content]</div>",
                     dict = JSON.parse(data);
 
-                dict.forEach(function (item) {
-                    html += htmlChunk.replace('[+content]', item).replace('[+id]', "file_" + item);
-                });
+                if (dict.length == 0) {
+                    html = "На сервере нет сохранённых документов"
+                } else {
+                    dict.forEach(function (item) {
+                        html += htmlChunk.replace('[+content]', item).replace('[+id]', "file_" + item);
+                    });
+                }
+
+
                 $("#openFileDialog>.fileView").html(html);
             }
         });
@@ -164,6 +170,7 @@ class MolviEngine {
 
                             lc.atoms.forEach(function (la) {
                                 var newAtom = new Atom(la.x, la.y, la.z, la.name);
+                                newAtom.id = la.id;
                                 newAtom.mass = la.mass;
                                 newAtom.radius = MolviConf.getAtomRadius(la.name);
 
@@ -202,7 +209,8 @@ class MolviEngine {
             $.ajax({
                 url: settings.loadMolFileUrl,
                 data: {
-                    'filename': fileName
+                    'filename': fileName,
+                    'clear': deleteold
                 },
                 error(data) {
                     $("#openFileDialogMol .fileView").html(data.responseText);
@@ -255,6 +263,7 @@ class MolviEngine {
             newHtml = chunk.replace(/\[FROM]/g, link.from);
             newHtml = newHtml.replace(/\[TO]/g, link.to);
             newHtml = newHtml.replace(/\[ID]/g, link.id);
+            newHtml = newHtml.replace(/\[length]/g, link.length);
             linkshtml += newHtml;
         });
 
@@ -669,28 +678,50 @@ class MolviEngine {
         if (deleteOld) {
             doc = new MolviDocument();
         }
-        var newCluster = new Cluster();
-        newCluster.caption = "Кластер " + (doc.clusters.length + 1).toString();
-        doc.clusters.push(newCluster);
+        let docData = JSON.parse(jsonString);
+        doc.documentName = docData["name"];
 
         var atar = JSON.parse(jsonString);
+        let satoms = docData["atoms"],
+            atomlist = {}
 
-        atar.forEach(function(item, indx){
+        satoms.forEach(function(item, indx){
             var x = parseFloat(item['x']),
                 y = parseFloat(item['y']),
                 z = parseFloat(item['z']),
+                id = parseInt(item['id']),
                 mass = parseFloat(item['mass']),
                 name = item['name'],
                 newAtom = new Atom(x, y, z, name);
+                newAtom.id = id;
                 newAtom.mass = mass;
-
-            newCluster.atomList.push(newAtom);
+            atomlist[id] = newAtom;
         });
+
+        docData["clusters"].forEach(function (scluster) {
+            let newCluster = new Cluster();
+            newCluster.id = scluster["id"]
+            newCluster.caption = scluster["caption"];
+            doc.clusters.push(newCluster);
+
+            scluster.atoms.forEach(function (atomid) {
+                newCluster.atomList.push(atomlist[atomid]);
+            });
+        });
+
+        docData["links"].forEach(function (link) {
+            let newLink = new Link(link["atom1"], link["atom2"]);
+            newLink.id = link["id"];
+            newLink.length = link["length"];
+            doc.links.push(newLink);
+        });
+
+
         engine.buildHtmlFromDoc();
         engine.build3DFromDoc();
 
         //reset to default view
-        view.resetCamera();
+        //view.resetCamera();
     }
 
     openPlusFileDialog() {
@@ -766,6 +797,7 @@ class MolviEngine {
         });
         if (cluster === null) {
             console.error("No cluster found. with id: " + id.toString());
+            return;
         } else {
             cluster.atomList.forEach(function (atom) {
                 atom.x += xshift;
@@ -775,8 +807,26 @@ class MolviEngine {
         }
         engine.closeMoveControls();
 
-        engine.buildHtmlFromDoc();
-        engine.build3DFromDoc();
+        $.ajax({
+            url: "/molvi/edit-cluster-move",
+            data: {
+                "cluster": cluster.id,
+                "x": xshift,
+                "y": yshift,
+                "z": zshift
+            },
+            success: function (data) {
+                console.log(data);
+                engine.LoadAtomDataFromServer(true);
+            },
+            error: function (data) {
+                alert("Error! c console for more in4");
+                console.warn(data.responseText);
+            }
+        });
+
+        //engine.buildHtmlFromDoc();
+        //engine.build3DFromDoc();
     }
 
     executeAutoTrace() {
@@ -831,6 +881,23 @@ class MolviEngine {
                 }
             });
         });
+
+        $.ajax({
+            url: "/molvi/save-links",
+            method: "GET",
+            data: {
+                "clear": true,
+                "links": JSON.stringify(doc.links)
+            },
+            success: function (data) {
+                console.log(data);
+                engine.LoadAtomDataFromServer(true);
+            },
+            error: function (data) {
+                alert("error. c console for details");
+                console.warn(data.responseText);
+            }
+        })
 
         engine.buildHtmlFromDoc();
         engine.build3DFromDoc();
@@ -1156,7 +1223,12 @@ class MolviView {
         //console.log(mousePosition);
 
         var atoms = view.atomGroup.children,
-            intersects = view.raycaster.intersectObjects(atoms);
+            links = view.linkGroup.children,
+            intersects = view.raycaster.intersectObjects(atoms),
+            linkInter = view.raycaster.intersectObjects(links);
+
+        //console.log(linkInter);
+        //console.log(links)
 
 
         //var highlighted = view.highlights;
@@ -1246,6 +1318,116 @@ class MolviView {
     }
 }
 
+function selectPanel(panelName) {
+    $(".viewPanel").hide();
+    $(".selector").removeClass("checked");
+
+    $("#panel"+panelName).fadeIn(500);
+    $("#selector"+panelName).addClass("checked");
+}
+
+function openChangeLinkLengthPanel(linkid, oldLength) {
+    $("#linkChangeLengthControls").fadeIn(500);
+
+    $("input[name=linkLengthOld]").val(oldLength);
+    $("input[name=linkLengthNew]").val(oldLength);
+    $("input[name=linkChangeLengthId]").val(linkid);
+    view.disableControls();
+}
+
+function closeChangeLinkLengthPanel(){
+    $("#linkChangeLengthControls").hide();
+    view.enableControls();
+}
+
+
+function changeLinkLength() {
+    let id = $("input[name=linkChangeLengthId]").val(),
+        length = $("input[name=linkLengthNew]").val();
+
+
+    $.ajax({
+        url: "edit-link-set-length",
+        data: {
+            "link": id,
+            "length": length
+        },
+        success: function (data) {
+            console.log(data);
+            engine.LoadAtomDataFromServer(true);
+        },
+        error: function (data) {
+            alert("Error c console 4 more in4");
+        }
+
+    });
+    closeChangeLinkLengthPanel();
+}
+
+function openLinkRotationPanel(id, from, to) {
+    $(".viewPanel").hide();
+    $("#linkRotationPanel").fadeIn(500);
+
+    $("input[name=linkRotation_link]").val(id);
+    $("input[name=linkRotation_atom1]").val(from);
+    $("input[name=linkRotation_atom2]").val(to);
+
+    view.disableControls();
+}
+
+function closeLinkRotationPanel() {
+    $("#linkRotationPanel").hide();
+    $(".selector:first-child").click();
+
+    view.enableControls();
+}
+
+function linkRotationHighlight(atomn) {
+    $(".dont-move").removeClass("selected");
+    $(".dont-move:nth-child(" +atomn+")").addClass("selected");
+
+    let aid = $("#linkRotationPanel .selected").html();
+    if (aid === "A1") {
+        engine.selectAtomById($("input[name=linkRotation_atom1]").val());
+    } else {
+        engine.selectAtomById($("input[name=linkRotation_atom2]").val());
+    }
+
+    console.log(aid);
+}
+
+function doLinkRotation() {
+    let link = $("input[name=linkRotation_link]").val(),
+        originAtom = 0,
+        degrees = $("input[name=linkRotation_degrees]").val(),
+        aid = $("#linkRotationPanel .selected").html();
+
+    if (aid === "A1") {
+        originAtom = $("input[name=linkRotation_atom1]").val();
+    } else {
+        originAtom = $("input[name=linkRotation_atom2]").val();
+    }
+
+    $.ajax({
+        url: "/molvi/rotate-cluster-around-link",
+        data: {
+            "link": link,
+            "origin-atom": originAtom,
+            "degrees": degrees
+        },
+        success: function (data) {
+            console.log(data);
+            closeLinkRotationPanel();
+            engine.LoadAtomDataFromServer(true);
+        },
+        error: function (data) {
+            alert("Error! c details in console");
+            console.warn(data.responseText);
+            closeLinkRotationPanel();
+        }
+    })
+}
+
 var engine = new MolviEngine(),
     view = new MolviView(),
     doc = new MolviDocument();
@@ -1275,4 +1457,7 @@ $(document).ready(function(){
 
     //загрузить активный файл с сервера
     engine.LoadAtomDataFromServer(true);
+
+
+    selectPanel("Atoms");
 });

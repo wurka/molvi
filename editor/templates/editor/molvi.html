@@ -57,9 +57,36 @@
             <div class="table">
                 <div class="row">
                     <div class="cell">
-                        <div class="atomsView">loading...</div>
-                        <div class="linksHolder">
+                        <div class="selectors">
+                            <div class="selector" id="selectorAtoms" onclick="selectPanel('Atoms')">
+                                <img src="{% static 'editor/images/molecula-32.png' %}" alt="molecula.png">
+                            </div>
+                            <div class="selector" id="selectorLinks" onclick="selectPanel('Links')">
+                                <img src="{% static 'editor/images/link-32.png' %}" alt="link.png">
+                            </div>
+                        </div>
+                        <div class="atomsView viewPanel" id="panelAtoms">loading...</div>
+                        <div class="linksHolder viewPanel" id="panelLinks">
                             <div class="linksView"> </div>
+                        </div>
+                        <div class="linkRotation viewPanel" id="linkRotationPanel">
+                            <input type="text" name="linkRotation_link">
+                            <input type="text" name="linkRotation_atom1">
+                            <input type="text" name="linkRotation_atom2">
+                            <div class="line" onclick="document.getElementById('linkRotationDegrees').focus()">
+                                <div class="name">Повернуть, град</div>
+                                <div class="value"><input type="text" name="linkRotation_degrees" id="linkRotationDegrees"></div>
+                            </div>
+                            <div class="line">Оставить неподвижным</div>
+                            <div class="dont-moves">
+                                <div class="dont-move selected" onclick="linkRotationHighlight(1)">A1</div>
+                                <div class="dont-move" onclick="linkRotationHighlight(2)">A2</div>
+                            </div>
+                            <div class="buttons">
+                                <div class="flat-button" onclick="doLinkRotation()">OK</div>
+                                <div class="flat-button" onclick="closeLinkRotationPanel()">Отмена</div>
+                            </div>
+
                         </div>
                     </div>
                     <div class="cell">
@@ -89,7 +116,6 @@
                             <div class="modeIcon">
                                 <img src="{% static 'editor/images/linemode_selected.png' %}" class="modeIcon selectedIcon" onclick="engine.selectMode('none')" id='icon_modeLineSelected'/>
                             </div>
-                            
                         </div>
                         <div id="infoMessageField">
                             <div id="infoMessage"> 
@@ -108,6 +134,24 @@
                                     <div class="button ok" onclick="engine.doMoleculaMove()">OK</div>
                                     <div class="button cancel" onclick="engine.closeMoveControls()">Отмена</div>
                                 </div>
+                            </div>
+                        </div>
+                        <div id="linkChangeLengthControls">
+                            <input type="hidden" name="linkChangeLengthId">
+                            <div class="title">Изменение длины связи</div>
+                            <div class="line">
+                                <div class="name">Текущая длина:</div>
+                                <div class="value disabled"><input type="text" name="linkLengthOld" value="1"></div>
+                            </div>
+                            <div class="line" onclick="document.getElementById('linkLengthNewInput').focus();">
+                                <div class="name">Новая длина:</div>
+                                <div class="value disabled">
+                                    <input type="text" name="linkLengthNew" value="1" id="linkLengthNewInput">
+                                </div>
+                            </div>
+                            <div class="buttons">
+                                <div class="flat-button" onclick="changeLinkLength()">OK</div>
+                                <div class="flat-button" onclick="closeChangeLinkLengthPanel()">Отмена</div>
                             </div>
                         </div>
                         <div id="transformRotate">
