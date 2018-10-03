@@ -65,6 +65,18 @@ class Link {
     }
 }
 
+class ValenceAngle {
+    constructor(id, name, atom1Id, atom2Id, atom3Id, link1Id, link2Id) {
+        this.id = id;
+        this.atom1Id = atom1Id;
+        this.atom2Id = atom2Id;
+        this.atom3Id = atom3Id;
+        this.link1Id = link1Id;
+        this.link2Id = link2Id;
+        this.name = name;
+    }
+}
+
 /**
  * Документ, хранящий информацию о рабочей области
  */
@@ -72,6 +84,7 @@ class MolviDocument {
     constructor() {
         this.links = [];
         this.clusters = [];
+        this.valenceAngles = [];
         this.documentName = "no name";
 
         this.selectedAtomIds = [];  // список выделенных атомов
@@ -267,8 +280,25 @@ class MolviEngine {
             linkshtml += newHtml;
         });
 
+        let valenceangleshtml = "";
+
+        chunk = Chunks.valenceAngle;
+
+        doc.valenceAngles.forEach(function (angle) {
+            newHtml = chunk.replace(/\[title]/g, angle.name);
+            newHtml = newHtml.replace(/\[id]/g, angle.name);
+            newHtml = newHtml.replace(/\[atom1]/g, angle.atom1Id);
+            newHtml = newHtml.replace(/\[atom2]/g, angle.atom2Id);
+            newHtml = newHtml.replace(/\[atom3]/g, angle.atom3Id);
+            newHtml = newHtml.replace(/\[link1]/g, angle.link1Id);
+            newHtml = newHtml.replace(/\[link2]/g, angle.link2Id);
+            valenceangleshtml += newHtml;
+        })
+
+
         $(".atomsView").html(html);
         $(".linksView").html(linkshtml);
+        $(".valenceAnglesView").html(valenceangleshtml);
     }
 
     selectionMaterial(){
@@ -622,6 +652,17 @@ class MolviEngine {
         engine.build3DFromDoc();
     }
 
+    selectAtomsById(ids, clear=true) {
+        if (clear) {
+            doc.selectedAtomIds = [];
+        }
+
+        ids.forEach(function (id) {
+            doc.selectedAtomIds.push(id);
+            engine.build3DFromDoc();
+        })
+    }
+
     /**
      * Снять выделение со всех атомов
      */
@@ -636,6 +677,16 @@ class MolviEngine {
 
         engine.build3DFromDoc();
         //engine.buildHtmlFromDoc();
+    }
+
+    selectLinksById(ids) {
+        doc.selectedLinkIds = [];
+
+        ids.forEach(function (id) {
+            doc.selectedLinkIds.push(id);
+        });
+
+        engine.build3DFromDoc();
     }
 
     selectLinkByIds(id1, id2) {
@@ -715,6 +766,19 @@ class MolviEngine {
             newLink.length = link["length"];
             doc.links.push(newLink);
         });
+
+        docData["valence_angles"].forEach(function (angle) {
+            let id = angle["id"],
+                name = angle["name"],
+                a1 = angle["atom1"],
+                a2 = angle["atom2"],
+                a3 = angle["atom3"],
+                link1 = angle["link1"],
+                link2 = angle["link2"],
+                newVA = new ValenceAngle(id, name, a1, a2, a3);
+
+            doc.valenceAngles.push(newVA);
+        })
 
 
         engine.buildHtmlFromDoc();
@@ -1427,6 +1491,35 @@ function doLinkRotation() {
         }
     })
 }
+
+function buildValenceAngles() {
+    $.ajax({
+        url: "/molvi/valence-angles-autotrace",
+        success: function (data) {
+            console.log(data);
+            engine.LoadAtomDataFromServer(true);
+        },
+        error: function (data) {
+            alert(data.responseText);
+        }
+    })
+}
+
+function deleteValenceAngle(id) {
+    $.ajax({
+        url: "/molvi/valence-angles-delete",
+        data: {
+            "id": id
+        },
+        success: function (data) {
+            console.log(data);
+        },
+        error: function (data) {
+            alert(data.responseText);
+        }
+    });
+}
+
 
 var engine = new MolviEngine(),
     view = new MolviView(),

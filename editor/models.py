@@ -48,4 +48,26 @@ class Link(models.Model):
 		return ans
 
 
+# двугранный угол (4 атома вряд, т.е. 3 связи)
+class DihedralAngle(models.Model):
+	name = models.TextField(default="Двугранный угол")
+	document = models.ForeignKey(Document, on_delete=models.CASCADE)
+
+
+# контент для двугранного угла
+class DihedralAngleLink(models.Model):
+	angle = models.ForeignKey(DihedralAngle, on_delete=models.CASCADE)
+	link = models.ForeignKey(Link, on_delete=models.CASCADE)
+
+
+class ValenceAngle(models.Model):
+	name = models.TextField(default="Валентный угол")
+	document = models.ForeignKey(Document, on_delete=models.CASCADE)
+
+
+# контент для валентного угла
+class ValenceAngleLink(models.Model):
+	angle = models.ForeignKey(ValenceAngle, on_delete=models.CASCADE)
+	link = models.ForeignKey(Link, on_delete=models.CASCADE)
+
 

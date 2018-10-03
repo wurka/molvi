@@ -2,7 +2,8 @@ from django.shortcuts import render
 from django.http import HttpResponse, Http404
 from .views_utils import *
 from .mathutils import rotate_by_deg
-from .models import Document, Link, Atom, Cluster, ClusterAtom
+from .models import Document, Link, Atom, Cluster, ClusterAtom, DihedralAngle, DihedralAngleLink
+from .models import ValenceAngle, ValenceAngleLink
 import os
 import json
 from .geom import Point, Line, Plane
@@ -218,6 +219,24 @@ def get_document(request):
 		return Http404("Error while file reading: " + str(ex))
 
 
+def harvest_connected(current: list, offs: list, collected: list, all_links: list):
+	#  Найти все соединённые атомы
+	#  current - список "активных" атомов
+	#  offs - исключённые из поиска атомы
+	#  collected - "найденные" атомы
+
+	for cur in current:  # обработаем каждый из указанных атомов
+		connected = list()  # атомы, соединённые с атомом cur
+		for link in all_links:
+			if link.atom1 == cur:
+				if link.atom2 not in offs:
+					connected.append(link.atom2)
+			if link.atom2 == cur:
+				if link.atom2 not in offs:
+					connected.append(link.atom1)
+
+
+
 def rotate_cluster_around_link(request):
 	must_be = ("link", "origin-atom", "degrees")
 	for must in must_be:
@@ -227,6 +246,18 @@ def rotate_cluster_around_link(request):
 	lid = int(request.GET["link"])
 	origin_atom_id = int(request.GET["origin-atom"])
 	degrees = float(request.GET["degrees"])
+
+	active_doc = Document.objects.get(is_active=True)
+	link = Link.objects.get(id=lid)
+	atoms = Atom.objects.filter(document=active_doc)
+	current = [link.atom1]
+	offs = [link.atom2]
+	collected = list()
+	all_links = Link.objects.filter(document=active_doc)
+	harvest_connected(current, offs, collected, all_links)
+
+	return HttpResponse("OK")
+
 
 	cluster = None
 	link = Link.objects.get(id=lid)
@@ -303,6 +334,63 @@ def rotate_cluster(request):
 	return HttpResponse(ans)
 
 
+def change_dihedral_angle(request):
+	# изменение двугранного угла
+	if "id" not in request.POST:
+		return HttpResponse("there is no parameter: id", status=500)
+
+	aid = int(request.POST["id"])
+	angle = DihedralAngle.objects.get(id=aid)
+	links = DihedralAngleLink.objects.filter(angle=angle)
+
+
+def change_valence_angle(request):
+	# изменение валентного угла
+	if "id" not in request.POST:
+		return HttpResponse("there is no parameter: id", status=500)
+
+	aid = int(request.POST["id"])
+	angle = ValenceAngle.objects.get(id=aid)
+	links = ValenceAngleLink.objects.filter(angle=angle)
+
+
+def valence_angles_autotrace(request):
+	# формирование валентных углов
+	# цикл по всем парам связей
+
+	document = Document.objects.get(is_active=True)
+	all_links = Link.objects.filter(document=document)
+
+	for i, link1 in enumerate(all_links):
+		j = i+1
+		while j < len(all_links):
+			link2 = all_links[j]
+
+			# есть общий атом - это валентный угол
+			if (
+					link1.atom1 == link2.atom1 or link1.atom1 == link2.atom2
+					or link1.atom2 == link2.atom1 or link1.atom2 == link2.atom2):
+
+				# создание нового валентного угла в БД
+				new_va = ValenceAngle.objects.create(
+					document=document,
+					name="{}-{}".format(link1.id, link2.id))
+				ValenceAngleLink.objects.create(angle=new_va, link=link1)
+				ValenceAngleLink.objects.create(angle=new_va, link=link2)
+			j += 1
+
+	return HttpResponse("OK")
+
+
+def valence_angles_delete(request):
+	if "id" not in request.GET:
+		return HttpResponse("there is no parameter: id", status=500)
+
+	vid = int(request.GET["id"])
+	ValenceAngle.objects.get(id=vid).delete()
+	return HttpResponse("OK")
+
+
 # создание нового документа
 def create_document(request):
 	creator = "Wurka"
@@ -350,11 +438,59 @@ def get_active_data(request):
 		"id": a.id, "x": a.x, "y": a.y, "z": a.z, "name": a.name, "color": a.color, "radius": a.radius
 	} for a in bdatoms]
 
+	# двугранные углы
+	dihedral_angles = list()
+	da_from_doc = DihedralAngle.objects.filter(document=sdoc)
+	for angle in da_from_doc:
+		myl = DihedralAngleLink.objects.filter(angle=angle)
+		if len(myl) == 4:
+			buf = list()
+			for m in myl:
+				if m.id not in buf:
+					buf.append(m.id)
+
+			dihedral_angles.append({
+				"id": angle.id,
+				"name": angle.name,
+				"atom1": buf[0],
+				"atom2": buf[1],
+				"atom3": buf[2],
+				"atom4": buf[3]
+			})
+
+	# валентные углы
+	valence_angles = list()
+	va_from_doc = ValenceAngle.objects.filter(document=sdoc)
+	for angle in va_from_doc:
+		val = ValenceAngleLink.objects.filter(angle=angle)
+		if len(val) != 2:
+			return HttpResponse("bad data with ValenceAngleLink", status=500)
+
+		buf = list()  # список атомов
+		for a in val:
+			if a.link.atom1.id not in buf:
+				buf.append(a.link.atom1.id)
+			if a.link.atom2.id not in buf:
+				buf.append(a.link.atom2.id)
+
+		if len(buf) == 3:  # у валентного угла всегда 3 атома
+			valence_angles.append({
+				"id": angle.id,
+				"name": angle.name,
+				"atom1": buf[0],
+				"atom2": buf[1],
+				"atom3": buf[2],
+				"link1": val[0].link.id,
+				"link2": val[1].link.id
+			})
+
 	adoc = {
 		"name": sdoc.name,
 		"clusters": clusters,
 		"links": links,
-		"atoms": atoms
+		"atoms": atoms,
+		"dihedral_angles": dihedral_angles,
+		"valence_angles": valence_angles
 	}
 
 	return HttpResponse(json.dumps(adoc))

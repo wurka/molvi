@@ -1,7 +1,7 @@
 /**
  * Created by teplyj-moh on 6/2/2018.
  */
-var Chunks = {
+let Chunks = {
     link : `
         <div class="link" id="link_0" onmouseover="engine.selectLinkById([ID])" onmouseout="engine.unselectLinks()">
             <div class='cell'>
@@ -31,5 +31,15 @@ var Chunks = {
                 [[data]]
             </div>
         </div>
-        `
+        `,
+    valenceAngle: `
+        <div class="valence-angle" onclick="engine.selectAtomsById(['[atom1]', '[atom2]', '[atom3]']); engine.selectLinksById(['[link1]', '[link2]'])">
+            <div class="title">[title]</div>
+            <div class="buttons">
+                <div class="button" onclick="deleteValenceAngle([id])">del</div>
+                <div class="button">change</div>
+            </div>
+</div>
+        </div>
+    `
 };

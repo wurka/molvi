@@ -33,4 +33,7 @@ urlpatterns = [
 	path('edit-cluster-move', views.edit_cluster_move),  # переместить кластер
 	path('edit-link-set-length', views.edit_link_set_length),  # изменить длину связи
 	path('rotate-cluster-around-link', views.rotate_cluster_around_link),  # повернуть кластер вокруг связи
+
+	path('valence-angles-autotrace', views.valence_angles_autotrace),  # построить автоматически список валентных углов
+	path('valence-angles-delete', views.valence_angles_delete),  # удалить валентный угол
 ]

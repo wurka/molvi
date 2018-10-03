@@ -58,24 +58,40 @@
                 <div class="row">
                     <div class="cell">
                         <div class="selectors">
-                            <div class="selector" id="selectorAtoms" onclick="selectPanel('Atoms')">
+                            <div class="selector" id="selectorAtoms" onclick="selectPanel('Atoms')" title="Список молекул">
                                 <img src="{% static 'editor/images/molecula-32.png' %}" alt="molecula.png">
                             </div>
-                            <div class="selector" id="selectorLinks" onclick="selectPanel('Links')">
+                            <div class="selector" id="selectorLinks" onclick="selectPanel('Links')" title="Список связей">
                                 <img src="{% static 'editor/images/link-32.png' %}" alt="link.png">
+                            </div>
+                            <div class="selector" id="selectorDihedralAngles" onclick="selectPanel('DihedralAngles')" title="Список двугранных углов">
+                                <img src="{% static 'editor/images/dihedral-angle-32.png' %}" alt="dihedral-angles.png">
+                            </div>
+                            <div class="selector" id="selectorValenceAngles" onclick="selectPanel('ValenceAngles')" title="Список валентных углов">
+                                <img src="{% static 'editor/images/valence-angle-32.png' %}" alt="valence-angles.png">
                             </div>
                         </div>
                         <div class="atomsView viewPanel" id="panelAtoms">loading...</div>
                         <div class="linksHolder viewPanel" id="panelLinks">
-                            <div class="linksView"> </div>
+                            <div class="linksView"></div>
                         </div>
+                        <div class="dihedralAngle viewPanel" id="panelDihedralAngles">
+                            dihedral angle
+                        </div>
+                        <div class="valenceAngle viewPanel" id="panelValenceAngles">
+                            <div class="buttons">
+                                <div class="flat-button" title="Построить автоматически список валентных угло" onclick="buildValenceAngles()">Построить</div>
+                            </div>
+                            <div class  ="valenceAnglesView">loading</div>
+                        </div>
+
                         <div class="linkRotation viewPanel" id="linkRotationPanel">
-                            <input type="text" name="linkRotation_link">
-                            <input type="text" name="linkRotation_atom1">
-                            <input type="text" name="linkRotation_atom2">
+                            <input title="linkRotation_link" type="text" name="linkRotation_link">
+                            <input title="linkRotation_atom1" type="text" name="linkRotation_atom1">
+                            <input title="linkRotation_atom2" type="text" name="linkRotation_atom2">
                             <div class="line" onclick="document.getElementById('linkRotationDegrees').focus()">
                                 <div class="name">Повернуть, град</div>
-                                <div class="value"><input type="text" name="linkRotation_degrees" id="linkRotationDegrees"></div>
+                                <div class="value"><input title="градусов" type="text" name="linkRotation_degrees" id="linkRotationDegrees"></div>
                             </div>
                             <div class="line">Оставить неподвижным</div>
                             <div class="dont-moves">
@@ -86,8 +102,8 @@
                                 <div class="flat-button" onclick="doLinkRotation()">OK</div>
                                 <div class="flat-button" onclick="closeLinkRotationPanel()">Отмена</div>
                             </div>
-
                         </div>
+
                     </div>
                     <div class="cell">
                         <div class="userControls">
