@@ -19,7 +19,12 @@
 </head>
 <body>
     {% csrf_token %}
-
+    <div class="loading">
+        <div class="image">
+            <img width="100" height="100" src="{% static 'editor/images/loading.gif' %}" alt="loading image">
+        </div>
+        <div class="text">Working</div>
+    </div>
     <div class="layout">
         <div id="saveFileDialog">
             <div class="title noselect">Введите имя файла для сохранения </div>
@@ -103,7 +108,6 @@
                                 <div class="flat-button" onclick="closeLinkRotationPanel()">Отмена</div>
                             </div>
                         </div>
-
                     </div>
                     <div class="cell">
                         <div class="userControls">
@@ -152,24 +156,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="linkChangeLengthControls">
-                            <input type="hidden" name="linkChangeLengthId">
-                            <div class="title">Изменение длины связи</div>
-                            <div class="line">
-                                <div class="name">Текущая длина:</div>
-                                <div class="value disabled"><input type="text" name="linkLengthOld" value="1"></div>
-                            </div>
-                            <div class="line" onclick="document.getElementById('linkLengthNewInput').focus();">
-                                <div class="name">Новая длина:</div>
-                                <div class="value disabled">
-                                    <input type="text" name="linkLengthNew" value="1" id="linkLengthNewInput">
-                                </div>
-                            </div>
-                            <div class="buttons">
-                                <div class="flat-button" onclick="changeLinkLength()">OK</div>
-                                <div class="flat-button" onclick="closeChangeLinkLengthPanel()">Отмена</div>
-                            </div>
-                        </div>
+
                         <div id="transformRotate">
                             <input type="hidden" name="rotateOrigin" id="rotateOrigin" class="origin">
                             <div class="title">Укажите величину поворота</div>
@@ -194,16 +181,46 @@
                 </div>
             </div>
             
-            <div class="buttons">
-                <input value="Добавить" type="button" onclick="AddAtom()"/>
-                <input value="Обновить" type="button" onclick="UpdateAtomList()"/>
-                <input value="Сохранить" type="button" onclick="engine.saveDocumentToServer()"/>
+            <div class="control_board" onmouseover="view.disableControls()" onmouseleave="view.enableControls()">
+                <div class="controls control-link-length">
+                    <div id="linkChangeLengthControls">
+                        <input type="hidden" name="linkChangeLengthId">
+                        <div class="title">Изменение длины связи</div>
+                        <div class="line">
+                            <div class="name">Текущая длина:</div>
+                            <div class="value disabled"><input type="text" name="linkLengthOld" value="1" title="Текущая длина"></div>
+                        </div>
+                        <div class="line" onclick="document.getElementById('linkLengthNewInput').focus();">
+                            <div class="name">Новая длина:</div>
+                            <div class="value disabled">
+                                <input type="text" name="linkLengthNew" value="1" id="linkLengthNewInput" title="Новая длина">
+                            </div>
+                        </div>
+                        <div class="buttons">
+                            <div class="flat-button" onclick="changeLinkLength()">OK</div>
+                            <div class="flat-button" onclick="closeChangeLinkLengthPanel()">Отмена</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="controls control-valence-angle">
+                    <div id="valence-angle-controls">
+                        <div class="title">Изменить валентный угол</div>
+                        <div class="line">
+                            <div class="name">Текущее значение, град</div>
+                            <div class="value"><input type="text" title="Текущее значение"></div>
+                        </div>
+                        <div class="line">
+                            <div class="name">Новое значение, град</div>
+                            <div class="value"><input type="text" title="Новое значение"></div>
+                        </div>
+                        <div class="buttons">
+                            <div class="flat-button" onclick="changeLinkLength()">OK</div>
+                            <div class="flat-button" onclick="closeChangeLinkLengthPanel()">Отмена</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div>
-            <input onclick="document.getElementById('zhopa').focus()" id="zhopa"/>
-        </div>
-        <div class="footer">footer</div>
     </div>
     <div id="errorMessage"></div>
 </body>

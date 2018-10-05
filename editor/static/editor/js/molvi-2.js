@@ -3,6 +3,23 @@
 //import * as THREE from "./three";
 
 
+function loading_display(ison) {
+    if (ison) {
+        $(".loading").show();
+    } else {
+        $(".loading").hide();
+    }
+}
+
+
+function editValenceAngle() {
+    $(".controls").hide();
+    $(".control-valence-angle").fadeIn(300);
+
+
+}
+
+
 class Settings {
     constructor() {
         this.openFileUrl = "/molvi/server/open-file-dialog";
@@ -293,7 +310,7 @@ class MolviEngine {
             newHtml = newHtml.replace(/\[link1]/g, angle.link1Id);
             newHtml = newHtml.replace(/\[link2]/g, angle.link2Id);
             valenceangleshtml += newHtml;
-        })
+        });
 
 
         $(".atomsView").html(html);
@@ -391,7 +408,7 @@ class MolviEngine {
             var lineMesh = view.buildLineMesh(atom1.x, atom1.y, atom1.z, atom2.x, atom2.y, atom2.z, lineColor);
             view.linkGroup.add(lineMesh);
 
-        })
+        });
 
         ////////////////////// SELECTED ///////////////////////
         while (view.outlinesGroup.children.length > 0) {
@@ -611,20 +628,25 @@ class MolviEngine {
     }
 
     LoadAtomDataFromServer(deleteold) {
-        var url = settings.loadActiveFileUrl;
+        let url = settings.loadActiveFileUrl;
+
+        loading_display(true);
 
         $.ajax({
             url: url,
             success: function(data){
                 // $(".atomsView").html(data); !!!!!
-                console.log("LoadAtoms: data loading OK")
+//              console.log("LoadAtoms: data loading OK")
                 engine.buildAtomData(data, deleteold);
-                console.log(data);
+//              console.log(data);
             },
             error: function(data) {
                 $(".atomsView").html(data.responseText);
-                console.log("ERROR")
-                console.log(data)
+                console.log("ERROR");
+                console.log(data);
+            },
+            complete: function () {
+                loading_display(false);
             }
         })
     }
@@ -683,7 +705,8 @@ class MolviEngine {
         doc.selectedLinkIds = [];
 
         ids.forEach(function (id) {
-            doc.selectedLinkIds.push(id);
+            let iid = parseInt(id);
+            doc.selectedLinkIds.push(iid);
         });
 
         engine.build3DFromDoc();
@@ -692,8 +715,8 @@ class MolviEngine {
     selectLinkByIds(id1, id2) {
         var thisLink = null;
         doc.links.forEach(function (link) {
-            if (((link.from == id1) && (link.to == id2)) ||
-                ((link.fomr == id2) && (link.to == id1)))
+            if (((link.from === id1) && (link.to === id2)) ||
+                ((link.fomr === id2) && (link.to === id1)))
             {
                 thisLink = link;
             }
@@ -716,6 +739,23 @@ class MolviEngine {
         });
         engine.build3DFromDoc();
         engine.buildHtmlFromDoc();
+
+        $.ajax({
+            url: "/molvi/save-links",
+            method: "GET",
+            data: {
+                "clear": true,
+                "links": JSON.stringify(doc.links)
+            },
+            success: function (data) {
+                console.log(data);
+                engine.LoadAtomDataFromServer(true);
+            },
+            error: function (data) {
+                alert("error. c console for details");
+                console.warn(data.responseText);
+            }
+        });
     }
 
     /**
@@ -775,10 +815,10 @@ class MolviEngine {
                 a3 = angle["atom3"],
                 link1 = angle["link1"],
                 link2 = angle["link2"],
-                newVA = new ValenceAngle(id, name, a1, a2, a3);
+                newVA = new ValenceAngle(id, name, a1, a2, a3, link1, link2);
 
             doc.valenceAngles.push(newVA);
-        })
+        });
 
 
         engine.buildHtmlFromDoc();
@@ -961,7 +1001,7 @@ class MolviEngine {
                 alert("error. c console for details");
                 console.warn(data.responseText);
             }
-        })
+        });
 
         engine.buildHtmlFromDoc();
         engine.build3DFromDoc();
@@ -1409,6 +1449,7 @@ function changeLinkLength() {
     let id = $("input[name=linkChangeLengthId]").val(),
         length = $("input[name=linkLengthNew]").val();
 
+    loading_display(true);
 
     $.ajax({
         url: "edit-link-set-length",
@@ -1422,6 +1463,7 @@ function changeLinkLength() {
         },
         error: function (data) {
             alert("Error c console 4 more in4");
+            loading_display(false);
         }
 
     });
@@ -1493,6 +1535,7 @@ function doLinkRotation() {
 }
 
 function buildValenceAngles() {
+    loading_display(true);
     $.ajax({
         url: "/molvi/valence-angles-autotrace",
         success: function (data) {
@@ -1501,6 +1544,7 @@ function buildValenceAngles() {
         },
         error: function (data) {
             alert(data.responseText);
+            loading_display(false);
         }
     })
 }

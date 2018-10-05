@@ -7,8 +7,8 @@ let Chunks = {
             <div class='cell'>
                 <span>[FROM]</span><span> - </span><span>[TO]</span>
             </div>
-            <div class="change-length cell" onclick="openChangeLinkLengthPanel([ID], [length])"><img src="/static/editor/images/change-length.png" alt="cl.png"></div>
-            <div class="change-length cell" onclick="openLinkRotationPanel([ID], [FROM], [TO])"><img src="/static/editor/images/link-rotation-20.png" alt="lr.png"></div>
+            <div class="change-length cell" onclick="openChangeLinkLengthPanel([ID], [length])"><img src="/static/editor/images/change-length.svg" alt="cl.png"></div>
+            <div class="change-length cell" onclick="openLinkRotationPanel([ID], [FROM], [TO])"><img src="/static/editor/images/spin.svg" alt="lr.png"></div>
             <div class="deleteLink cell" title="delete link" onclick="engine.deleteLink([ID])">x</div>
         </div>
     `,
@@ -33,13 +33,12 @@ let Chunks = {
         </div>
         `,
     valenceAngle: `
-        <div class="valence-angle" onclick="engine.selectAtomsById(['[atom1]', '[atom2]', '[atom3]']); engine.selectLinksById(['[link1]', '[link2]'])">
+        <div class="valence-angle" onclick="engine.selectAtomsById(['[atom1]', '[atom2]', '[atom3]']); engine.selectLinksById(['[link1]', '[link2]'])"  onmouseover="engine.selectAtomsById(['[atom1]', '[atom2]', '[atom3]']); engine.selectLinksById(['[link1]', '[link2]'])">
             <div class="title">[title]</div>
             <div class="buttons">
-                <div class="button" onclick="deleteValenceAngle([id])">del</div>
-                <div class="button">change</div>
+                <div class="button deleteva" onclick="deleteValenceAngle([id])" title="Удалить">x</div>
+                <div class="button editva" onclick="editValenceAngle([id])" title="Изменить угол"><img src="/static/editor/images/pen.svg" alt="pen"></div>
             </div>
-</div>
-        </div>
+        </div>       
     `
 };

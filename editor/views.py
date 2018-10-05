@@ -153,7 +153,7 @@ def get_mol_file(request):
 	file_name = os.path.join(mol_dir, file_name)
 	atom_list = mol_file_data(file_name)
 
-	return HttpResponse(ans)
+	return HttpResponse(atom_list)
 
 
 def save_document(request):
@@ -225,16 +225,28 @@ def harvest_connected(current: list, offs: list, collected: list, all_links: lis
 	#  offs - исключённые из поиска атомы
 	#  collected - "найденные" атомы
 
-	for cur in current:  # обработаем каждый из указанных атомов
-		connected = list()  # атомы, соединённые с атомом cur
+	connected = list()  # атомы, соединённые с каждым атомом cur в current
+
+	while len(current) > 0:  # обработаем каждый из указанных атомов
+		cur = current[0]
+		collected.append(cur)
+		current.remove(cur)
+		offs.append(cur)  # второй раз не работаем с этим атомом
+
 		for link in all_links:
 			if link.atom1 == cur:
 				if link.atom2 not in offs:
 					connected.append(link.atom2)
 			if link.atom2 == cur:
-				if link.atom2 not in offs:
+				if link.atom1 not in offs:
 					connected.append(link.atom1)
 
+	for x in connected:
+		current.append(x)
+
+	if len(current) > 0:
+		harvest_connected(current, offs, collected, all_links)
+	print("harvest_connected done.")
 
 
 def rotate_cluster_around_link(request):
@@ -256,24 +268,8 @@ def rotate_cluster_around_link(request):
 	all_links = Link.objects.filter(document=active_doc)
 	harvest_connected(current, offs, collected, all_links)
 
-	return HttpResponse("OK")
-
-
-	cluster = None
 	link = Link.objects.get(id=lid)
 	oa = Atom.objects.get(id=origin_atom_id)
-	active_doc = Document.objects.get(is_active=True)
-	clusters = Cluster.objects.filter(document=active_doc)
-
-	for c in clusters:
-		catoms = ClusterAtom.objects.filter(cluster=c)
-		for cc in catoms:
-			if cc.atom.id == origin_atom_id:
-				cluster = c
-				break
-
-	if cluster is None:
-		return HttpResponse("cluster not found", status=500)
 
 	if link.atom1.id == origin_atom_id:
 		a_from = link.atom1
@@ -289,8 +285,8 @@ def rotate_cluster_around_link(request):
 	quat = Quaternion.create_quaternion(vx, vy, vz, degrees/180.0*pi)
 	quat.normalize()
 
-	catoms = ClusterAtom.objects.filter(cluster=cluster)
-	atoms = [catom.atom for catom in catoms]
+	# catoms = collected
+	atoms = collected  # [catom.atom for catom in catoms]
 
 	for atom in atoms:
 		point = Point(atom.x, atom.y, atom.z)
@@ -353,12 +349,23 @@ def change_valence_angle(request):
 	angle = ValenceAngle.objects.get(id=aid)
 	links = ValenceAngleLink.objects.filter(angle=angle)
 
+	if len(links) != 2:
+		return HttpResponse
+
+	# угол A1-A2-A3 образован 3-мя точками (центрами атомов), где
+	# А2 - общий атом
+
+
 
 def valence_angles_autotrace(request):
 	# формирование валентных углов
 	# цикл по всем парам связей
 
 	document = Document.objects.get(is_active=True)
+
+	# удаление старых валентных углов
+	old_angles = ValenceAngle.objects.filter(document=document).delete()
+
 	all_links = Link.objects.filter(document=document)
 
 	for i, link1 in enumerate(all_links):
@@ -582,36 +589,49 @@ def edit_link_set_length(request):
 	atom1 = link.atom1
 	atom2 = link.atom2
 	document = link.atom1.document
-	all_atoms = Atom.objects.filter(document=document)
+	all_atoms = list(Atom.objects.filter(document=document))
+	all_atoms.remove(atom1)
 
 	point1 = Point(x=atom1.x, y=atom1.y, z=atom1.z)
 	point2 = Point(x=atom2.x, y=atom2.y, z=atom2.z)
-	new_distance = float(request.GET["length"])
+	try:
+		new_distance = float(request.GET["length"])
+	except ValueError:
+		return HttpResponse("Not valid float number: {}".format(request.GET["length"]), status=500)
+
 	old_distance = point1.distance_to(point2)
-	delta = (new_distance - old_distance)/2.0  # двигаем в обе стороны от точки
-	middle = Point(
-		x=(atom1.x+atom2.x)/2,
-		y=(atom1.y+atom2.y)/2,
-		z=(atom1.z+atom2.z)/2
-	)
-	line = Line.from_points(point1, middle)
-	plane = Plane.from_line_and_point(line, middle)
+	delta = (new_distance - old_distance)  # двигаем в обе стороны от точки
+
+	line = Line.from_points(point1, point2)
+	plane = Plane.from_line_and_point(line, point1)
 	points = [Point(x=atom.x, y=atom.y, z=atom.z) for atom in all_atoms]
-	on_top = [point.on_top(plane) for point in points]
+	on_top = dict()
+	for indx, a in enumerate(all_atoms):
+		point = points[indx]
+		on_top[a.id] = point.on_top(plane)
+	#on_top = [point.on_top(plane) for point in points]
+	# TODO: заменить одной строкой
 	devider = sqrt(line.kx**2 + line.ky**2 + line.kz**2)
 	movex = delta * line.kx / devider
 	movey = delta * line.ky / devider
 	movez = delta * line.kz / devider
 
-	for indx, atom in enumerate(all_atoms):
-		if on_top[indx]:
+	all_links = Link.objects.filter(document=document)
+	collected = list()
+	current = [atom2]
+	offs = [atom1]
+	harvest_connected(current, offs, collected, all_links)
+	# collected.remove(atom1)
+
+	for indx, atom in enumerate(collected):
+		if on_top[atom.id]:
 			atom.x += movex
 			atom.y += movey
 			atom.z += movez
-		else:
-			atom.x -= movex
-			atom.y -= movey
-			atom.z -= movez
+		# else:
+		# 	atom.x -= movex
+		# 	atom.y -= movey
+		#	atom.z -= movez
 		atom.save()
 
 	return HttpResponse("OK")
