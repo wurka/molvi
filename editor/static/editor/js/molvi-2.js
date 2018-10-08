@@ -12,13 +12,12 @@ function loading_display(ison) {
 }
 
 
-function editValenceAngle() {
+function editValenceAngle(id) {
     $(".controls").hide();
     $(".control-valence-angle").fadeIn(300);
 
-
+    $(".control-valence-angle .input-id").val(id);
 }
-
 
 class Settings {
     constructor() {
@@ -286,7 +285,7 @@ class MolviEngine {
             html += mhtml;
         });
         
-        var linkshtml = "",
+        let linkshtml = "",
             newHtml = "",
             chunk = Chunks.link;
         doc.links.forEach(function (link) {
@@ -303,7 +302,7 @@ class MolviEngine {
 
         doc.valenceAngles.forEach(function (angle) {
             newHtml = chunk.replace(/\[title]/g, angle.name);
-            newHtml = newHtml.replace(/\[id]/g, angle.name);
+            newHtml = newHtml.replace(/\[id]/g, angle.id);
             newHtml = newHtml.replace(/\[atom1]/g, angle.atom1Id);
             newHtml = newHtml.replace(/\[atom2]/g, angle.atom2Id);
             newHtml = newHtml.replace(/\[atom3]/g, angle.atom3Id);
@@ -1400,7 +1399,7 @@ class MolviView {
             var handler = 'engine.openFileDialogMol_loadSelected(true)';
             $("#openFileDialogMol .mybutton:first-child").attr('onclick', handler);
             view.disableControls()
-        } else if (mode == 'plusmol') {
+        } else if (mode === 'plusmol') {
             $("#openFileDialogMol").show();
             engine.molList2Explorer();
             var handler = 'engine.openFileDialogMol_loadSelected(false)';
@@ -1569,6 +1568,34 @@ var engine = new MolviEngine(),
     view = new MolviView(),
     doc = new MolviDocument();
 
+
+function doEditValenceAngle() {
+    let id = $(".control-valence-angle .input-id").val(),
+        angle = $(".control-valence-angle .input-angle").val(),
+        csrf_token = $("input[name=csrfmiddlewaretoken]").val();
+
+
+    $.ajax({
+        url: "/molvi/valence-angles-change",
+        method: "POST",
+        data: {
+            id: parseFloat(id),
+            angle: parseFloat(angle),
+            csrfmiddlewaretoken: csrf_token
+        },
+        success: function (data) {
+            console.log("doEditValenceAngle: " + data);
+            engine.LoadAtomDataFromServer(true);
+        },
+        error: function (data) {
+            console.error(data.responseText);
+            alert("Error! C console 4 in4, pls.");
+        }
+    });
+}
+
+
+
 $(document).ready(function(){
     engine.view = view;
     view.engine = engine;
@@ -1590,7 +1617,7 @@ $(document).ready(function(){
 
     var inputElement = document.getElementById('traceRange');
     inputElement.onkeypress = engine.autoTraceKeyPressed;
-    inputElement.value = 1.6;
+    inputElement.value = 1.4;
 
     //загрузить активный файл с сервера
     engine.LoadAtomDataFromServer(true);
@@ -1598,3 +1625,5 @@ $(document).ready(function(){
 
     selectPanel("Atoms");
 });
+
+

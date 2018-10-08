@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 from django.shortcuts import render
 from django.http import HttpResponse, Http404
 from .views_utils import *
@@ -10,6 +11,7 @@ from .geom import Point, Line, Plane
 from math import sqrt, pi
 from django.db.transaction import atomic
 from .geom import Quaternion, Point
+from pyquaternion import Quaternion as Quater
 
 
 # Create your views here.
@@ -30,6 +32,8 @@ def mol_file_data(file_name):
 	"""
 	ans = ""
 	atoms = list()
+	ValenceAngle.objects.all().delete()
+	ValenceAngleLink.objects.all().delete()
 
 	active_doc = None
 	try:
@@ -110,7 +114,6 @@ def get_active_data_old(request):
 	free_atoms = Atom.objects.filter(document=adoc)
 	clusters = Cluster.objects.filter(document=adoc)
 	atoms = [ClusterAtom.objects.get(claster=c).atom for c in clusters]
-
 
 	# чтение файла currentFile.txt
 	try:
@@ -340,21 +343,68 @@ def change_dihedral_angle(request):
 	links = DihedralAngleLink.objects.filter(angle=angle)
 
 
-def change_valence_angle(request):
+def valence_angle_change(request):
 	# изменение валентного угла
 	if "id" not in request.POST:
 		return HttpResponse("there is no parameter: id", status=500)
+	if "angle" not in request.POST:
+		return HttpResponse("there is no parameter: angle", status=500)
+
+	try:
+		rotation_angle = float(request.POST["angle"])
+	except ValueError:
+		return HttpResponse("Wrong float value for angle: {}".format(request.POST["angle"]))
 
 	aid = int(request.POST["id"])
 	angle = ValenceAngle.objects.get(id=aid)
 	links = ValenceAngleLink.objects.filter(angle=angle)
 
 	if len(links) != 2:
-		return HttpResponse
+		return HttpResponse("wrong input info about links", status=500)
 
 	# угол A1-A2-A3 образован 3-мя точками (центрами атомов), где
-	# А2 - общий атом
+	# A2 - общий атом
+	a1, a2, a3 = None, None, None
+	link1, link2 = links[0].link, links[1].link
+	if link1.atom1 == link2.atom1:
+		a2 = link1.atom1
+		a1 = link1.atom2
+		a3 = link2.atom2
+	elif link1.atom2 == link2.atom2:
+		a2 = link1.atom2
+		a1 = link1.atom1
+		a3 = link2.atom1
+	elif link1.atom1 == link2.atom2:
+		a2 = link1.atom1
+		a1 = link1.atom2
+		a3 = link2.atom1
+	elif link1.atom2 == link2.atom1:
+		a2 = link1.atom2
+		a1 = link1.atom1
+		a3 = link2.atom2
 
+	v1 = (a1.x - a2.x, a1.y - a2.y, a1.z - a2.z)  # вектор от атома a2 до атома а1
+	v2 = (a3.x - a2.x, a3.y - a2.y, a3.z - a2.z)  # вектор от амтома а2 до атома а3
+	vector = (v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
+	q = Quater(axis=vector, angle=rotation_angle)
+
+	active_doc = Document.objects.get(is_active=True)
+	current = [a2]
+	offs = [a1]
+	collected = list()
+	all_links = Link.objects.filter(document=active_doc)
+	harvest_connected(current, offs, collected, all_links)
+	collected.remove(a2)
+
+	# цикл по собранным атомам
+	for some_a in collected:
+		rotated = q.rotate((some_a.x-a2.x, some_a.y-a2.y, some_a.z-a2.z))
+		some_a.x = rotated[0] + a2.x
+		some_a.y = rotated[1] + a2.y
+		some_a.z = rotated[2] + a2.z
+		some_a.save()
+
+	return HttpResponse("OK")
 
 
 def valence_angles_autotrace(request):
@@ -609,7 +659,7 @@ def edit_link_set_length(request):
 	for indx, a in enumerate(all_atoms):
 		point = points[indx]
 		on_top[a.id] = point.on_top(plane)
-	#on_top = [point.on_top(plane) for point in points]
+	# on_top = [point.on_top(plane) for point in points]
 	# TODO: заменить одной строкой
 	devider = sqrt(line.kx**2 + line.ky**2 + line.kz**2)
 	movex = delta * line.kx / devider
@@ -635,10 +685,3 @@ def edit_link_set_length(request):
 		atom.save()
 
 	return HttpResponse("OK")
-
-
-
-
-
-
-

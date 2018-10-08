@@ -36,4 +36,5 @@ urlpatterns = [
 
 	path('valence-angles-autotrace', views.valence_angles_autotrace),  # построить автоматически список валентных углов
 	path('valence-angles-delete', views.valence_angles_delete),  # удалить валентный угол
+	path('valence-angles-change', views.valence_angle_change),  # изменить валентный угол
 ]
