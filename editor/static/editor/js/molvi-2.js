@@ -349,22 +349,28 @@ class MolviEngine {
         }
 
         //////////////////// Clusters & atoms ////////////////////////
+
         doc.clusters.forEach(function (cluster) {
             cluster.atomList.forEach(function (atom) {
-                var x = parseFloat(atom.x),
-                    y = parseFloat(atom.y),
-                    z = parseFloat(atom.z),
-                    radius = MolviConf.getAtomRadius(atom.name),
+                let radius = MolviConf.getAtomRadius(atom.name),
                     sd = settings.sphereDetalisation,
                     geometry = new THREE.SphereGeometry(radius, sd, sd),
                     material = engine.buildAtomMaterial(atom.name),
-                    mesh = new THREE.Mesh(geometry, material);
+                    mesh = new THREE.Mesh(geometry, material),
+                    htmllabel = htmlLabels.createLabel();
 
-                mesh.position.x = x;
-                mesh.position.y = y;
-                mesh.position.z = z;
+                mesh.position.x = parseFloat(atom.x);
+                mesh.position.y = parseFloat(atom.y);
+                mesh.position.z = parseFloat(atom.z);
                 view.atomGroup.children.push(mesh);
                 view.atomMaterials.push(material);
+
+                htmllabel.setParent(mesh);
+                htmllabel.setHTML(atom.name + atom.id);
+                console.log(atom);
+                view.labels.push(htmllabel);
+                let disp = document.getElementById("display");
+                disp.appendChild(htmllabel.element);
             });
         });
 
@@ -381,10 +387,10 @@ class MolviEngine {
 
             doc.clusters.forEach(function (cluster) {
                 cluster.atomList.forEach(function (atom) {
-                    if (atom.id == link.from) {
+                    if (atom.id === link.from) {
                         atom1 = atom;
                     }
-                    if (atom.id == link.to) {
+                    if (atom.id === link.to) {
                         atom2 = atom;
                     }
                 });
@@ -1203,10 +1209,14 @@ class MolviView {
         this.highlights = [];  // Array<Three.Mesh>
         this.selected = [];  // Array<Three.Mesh>
 
+        this.labels = [];
+
+        this.container = false;  // container of 3d content (usualy div)
+
     }
 
     init() {
-        "use strict"
+        "use strict";
         this.initGL("display", 600, 600);
         this.buildScene();
         MolviView.paintGL();
@@ -1220,7 +1230,7 @@ class MolviView {
         view.viewWidth = width;
         view.viewHeight = height;
 
-        var aspect = width / height,
+        let aspect = width / height,
             host = document.getElementById(hostid);
 
         //camera = new THREE.OrthographicCamera(-10, 10, -10, 10, 0.1, 100)
@@ -1246,6 +1256,8 @@ class MolviView {
         });*/
 
         host.appendChild(this.renderer.domElement);
+
+        htmlLabels.setContainer(document.getElementById(hostid));
     }
 
     static paintGL() {
@@ -1256,6 +1268,10 @@ class MolviView {
         view.handleSelection();
 
         view.renderer.render(view.scene, view.camera);
+
+        for (let i=0; i < view.labels.length; i++) {
+            view.labels[i].updatePosition();
+        }
     }
 
     buildScene() {
@@ -1595,7 +1611,6 @@ function doEditValenceAngle() {
 }
 
 
-
 $(document).ready(function(){
     engine.view = view;
     view.engine = engine;
@@ -1624,6 +1639,51 @@ $(document).ready(function(){
 
 
     selectPanel("Atoms");
+
+    console.log(htmlLabels.createLabel());
 });
 
+let htmlLabels = {
+    x: 1,
+    y: 2,
+    container: undefined,  // html element to display htmlLabels
+    setContainer: function (arg) {
+            this.container = arg;
+        },
+    createLabel: function () {
+        let div = document.createElement('div');
+        div.className = 'html-label';
+        div.innerHTML = "sVETA";
 
+        let thisLabel = this;
+
+        return {
+            element: div,
+            parent: false,
+            position: new THREE.Vector3(0, 0, 0),
+            setHTML: function (html) {
+                this.element.innerHTML = html;
+            },
+            setParent: function (threejsobj) {
+                this.parent = threejsobj;
+            },
+
+            updatePosition: function () {
+                if (parent) {
+                    this.position.copy(this.parent.position);
+                }
+
+                let coords2d = this.get2DCoords(this.position, view.camera);
+                this.element.style.left = coords2d.x + 'px';
+                this.element.style.top = coords2d.y + 'px';
+            },
+            get2DCoords: function (position, camera) {
+                let vector = position.project(camera);
+                vector.x = (vector.x + 1)/2 * thisLabel.container.clientWidth;
+                vector.y = -(vector.y - 1)/2 * thisLabel.container.clientHeight;
+                return vector;
+            }
+        }
+    }
+    
+};

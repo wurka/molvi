@@ -52,11 +52,13 @@
       width: 600px;
       box-sizing: border-box;
       text-align: center;
-      margin: 5px 0 0 0; }
+      margin: 5px 0 0 0;
+      position: relative; }
     .layout .body .userControls {
       position: absolute;
       width: 600px;
-      text-align: right; }
+      text-align: right;
+      z-index: 1; }
       .layout .body .userControls img {
         margin: 5px 0 0 0;
         border: 2px solid transparent;
@@ -383,5 +385,11 @@
     font-size: 30px;
     font-family: Consolas, monospace;
     text-shadow: black 0 0 2px; }
+
+.html-label {
+  position: absolute;
+  text-align: left;
+  text-shadow: black 0 0 2px;
+  color: white; }
 
 /*# sourceMappingURL=molvi.css.map */
