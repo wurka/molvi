@@ -12,11 +12,12 @@ function loading_display(ison) {
 }
 
 
-function editValenceAngle(id) {
+function editValenceAngle(id, currentValue) {
     $(".controls").hide();
     $(".control-valence-angle").fadeIn(300);
 
     $(".control-valence-angle .input-id").val(id);
+    $(".control-valence-angle .current-value").html(currentValue);
 }
 
 class Settings {
@@ -32,8 +33,9 @@ class Settings {
         this.rotateClusterUrl = "/molvi/rotate-cluster";  // запрос на вращение кластера молекул относительно точки
     }
 }
-var settings = new Settings();
-var lastId = 0;
+let settings = new Settings(),
+    lastId = 0;
+
 /**
  * Сгенерировать id
  */
@@ -74,15 +76,17 @@ class Cluster {
  * Информация о связи
  */
 class Link {
-    constructor(fromId, toId) {
+    constructor(fromId, toId, name, value) {
         //this.id = getId();
         this.from = fromId;
         this.to = toId;
+        this.name = name;
+        this.value = value;
     }
 }
 
 class ValenceAngle {
-    constructor(id, name, atom1Id, atom2Id, atom3Id, link1Id, link2Id) {
+    constructor(id, name, value, atom1Id, atom2Id, atom3Id, link1Id, link2Id) {
         this.id = id;
         this.atom1Id = atom1Id;
         this.atom2Id = atom2Id;
@@ -90,6 +94,7 @@ class ValenceAngle {
         this.link1Id = link1Id;
         this.link2Id = link2Id;
         this.name = name;
+        this.value = value;
     }
 }
 
@@ -224,7 +229,7 @@ class MolviEngine {
      * Загрузка выбранного в списке fileView (.mol) файла     *
      */
     openFileDialogMol_loadSelected(deleteold=true) {
-        var element = $("#openFileDialogMol .selected"),
+        let element = $("#openFileDialogMol .selected"),
             fileName = "";
 
         view.enableControls();
@@ -292,7 +297,9 @@ class MolviEngine {
             newHtml = chunk.replace(/\[FROM]/g, link.from);
             newHtml = newHtml.replace(/\[TO]/g, link.to);
             newHtml = newHtml.replace(/\[ID]/g, link.id);
+            newHtml = newHtml.replace(/\[name]/g, link.name);
             newHtml = newHtml.replace(/\[length]/g, link.length);
+            newHtml = newHtml.replace(/\[value]/g, link.value);
             linkshtml += newHtml;
         });
 
@@ -308,6 +315,7 @@ class MolviEngine {
             newHtml = newHtml.replace(/\[atom3]/g, angle.atom3Id);
             newHtml = newHtml.replace(/\[link1]/g, angle.link1Id);
             newHtml = newHtml.replace(/\[link2]/g, angle.link2Id);
+            newHtml = newHtml.replace(/\[value]/g, angle.value);
             valenceangleshtml += newHtml;
         });
 
@@ -318,7 +326,7 @@ class MolviEngine {
     }
 
     selectionMaterial(){
-        var ans = new THREE.MeshNormalMaterial({ // .MeshPhongMaterial({
+        let ans = new THREE.MeshNormalMaterial({ // .MeshPhongMaterial({
             // color: 0xef2500
         });
         return ans;
@@ -349,6 +357,11 @@ class MolviEngine {
         }
 
         //////////////////// Clusters & atoms ////////////////////////
+        view.labels = [];  // clear labels
+        let disp = document.getElementById("display");
+        while (disp.children.length > 1) {
+            disp.children[1].remove();
+        }
 
         doc.clusters.forEach(function (cluster) {
             cluster.atomList.forEach(function (atom) {
@@ -367,10 +380,11 @@ class MolviEngine {
 
                 htmllabel.setParent(mesh);
                 htmllabel.setHTML(atom.name + atom.id);
-                console.log(atom);
+//                console.log(atom);
                 view.labels.push(htmllabel);
-                let disp = document.getElementById("display");
+
                 disp.appendChild(htmllabel.element);
+
             });
         });
 
@@ -469,8 +483,10 @@ class MolviEngine {
     }
 
     static onMouseDown(/*event*/) {
-        if (view.highlights.length == 1) {
-            var point = view.highlights[0].point, // точка пересечения raycaster'a с объектом
+        let pointedAtoms = [];
+
+        if (view.highlights.length === 1) {
+            let point = view.highlights[0].point, // точка пересечения raycaster'a с объектом
                 r = 0,
                 owners = [],
                 sx, sy, sz;
@@ -492,11 +508,12 @@ class MolviEngine {
 
             owners.forEach(function (owner) {
                 engine.selectAtomById(owner.id);
+                pointedAtoms.push(owner.id);
             });
         }
 
         // действия, зависящие от режима управления
-        if (engine.controlMode == "rotate") {  // вращение кластера
+        if (engine.controlMode === "rotate") {  // вращение кластера
             if (doc.selectedAtomIds.length >= 1) {
                 $("#transformRotate>.origin").val(doc.selectedAtomIds[0]);
                 engine.userMessage();
@@ -511,13 +528,17 @@ class MolviEngine {
                     $("#tr_dz").val(0.0);
                     $("#tr_dx").focus();
                     $("#tr_dx").select();
-                })
+                });
             }
-        } else if (engine.controlMode == "link") { // создание связи
+        } else if (engine.controlMode === "link") { // создание связи
             engine.linkCreationSource = doc.selectedAtomIds;
             engine.linkCreation();
             //console.log(doc.selectedAtomIds);
             //engine.linkCreationSource
+        } else if (engine.controlMode === "dihedral creation") {
+            if (pointedAtoms.length >= 1) {
+                dihedralAngleCreator.addAtom(pointedAtoms[0]);
+            }
         }
 
 
@@ -565,7 +586,7 @@ class MolviEngine {
     startLinkCreationHtml() {
         engine.linkCreationSource = [];
         engine.unselectAtoms();
-        engine.controlMode = 'link'
+        engine.controlMode = 'link';
         engine.linkCreation();
     }
 
@@ -585,16 +606,16 @@ class MolviEngine {
         //ids содержит что-то
         if (this.linkCreationSource.length == 2) {
             engine.userMessage();
-            var atom1 = null,
+            let atom1 = null,
                 atom2 = null;
 
             doc.clusters.forEach(function (cluster) {
                 cluster.atomList.forEach(function (atom) {
 
                 })
-            })
+            });
 
-            var newLink = new Link(this.linkCreationSource[0], this.linkCreationSource[1]);
+            let newLink = new Link(this.linkCreationSource[0], this.linkCreationSource[1], "new linkk", 0);
             doc.links.push(newLink);
 
             engine.controlMode ='none';
@@ -777,12 +798,12 @@ class MolviEngine {
         let docData = JSON.parse(jsonString);
         doc.documentName = docData["name"];
 
-        var atar = JSON.parse(jsonString);
+        let atar = JSON.parse(jsonString);
         let satoms = docData["atoms"],
-            atomlist = {}
+            atomlist = {};
 
         satoms.forEach(function(item, indx){
-            var x = parseFloat(item['x']),
+            let x = parseFloat(item['x']),
                 y = parseFloat(item['y']),
                 z = parseFloat(item['z']),
                 id = parseInt(item['id']),
@@ -796,7 +817,7 @@ class MolviEngine {
 
         docData["clusters"].forEach(function (scluster) {
             let newCluster = new Cluster();
-            newCluster.id = scluster["id"]
+            newCluster.id = scluster["id"];
             newCluster.caption = scluster["caption"];
             doc.clusters.push(newCluster);
 
@@ -806,7 +827,7 @@ class MolviEngine {
         });
 
         docData["links"].forEach(function (link) {
-            let newLink = new Link(link["atom1"], link["atom2"]);
+            let newLink = new Link(link["atom1"], link["atom2"], link["name"], link["value"]);
             newLink.id = link["id"];
             newLink.length = link["length"];
             doc.links.push(newLink);
@@ -820,7 +841,8 @@ class MolviEngine {
                 a3 = angle["atom3"],
                 link1 = angle["link1"],
                 link2 = angle["link2"],
-                newVA = new ValenceAngle(id, name, a1, a2, a3, link1, link2);
+                value = parseFloat(angle["value"]).toFixed(2),
+                newVA = new ValenceAngle(id, name, value, a1, a2, a3, link1, link2);
 
             doc.valenceAngles.push(newVA);
         });
@@ -850,7 +872,7 @@ class MolviEngine {
                 }
             },
             error: function(data) {
-                alert("Ошибка при открытии файла")
+                alert("Ошибка при открытии файла");
                 console.log("open file error: " + data.toString())
             }
         })
@@ -861,35 +883,50 @@ class MolviEngine {
      * @param clusterId id кластера, который требуется перенести
      */
     openMoveControls(clusterId){
-        "use strict"
+        "use strict";
 
-        $("#moveMoleculaId").html(clusterId)
-        $('#moleculaMoveControls').show()
+        $("#moveMoleculaId").html(clusterId);
+        $('#moleculaMoveControls').show();
 
-        $("#moveControl_x").val(0)
-        $("#moveControl_y").val(0)
-        $("#moveControl_z").val(0)
+        $("#moveControl_x").val(0);
+        $("#moveControl_y").val(0);
+        $("#moveControl_z").val(0);
 
-        view.controls.enabled = false
+        // view.controls.enabled = false
+        closeControls();
+        $(".control-cluster-position").fadeIn(200);
     }
 
     /**
      * Закрыть элементы управления для переноса кластера
      */
-    closeMoveControls(){
-        view.controls.enabled = true
+    closeMoveControls(xhift, yshift, zshift){
+        view.controls.enabled = true;
         $('#moleculaMoveControls').hide()
     }
 
-    doMoleculaMove() {
-        var xshift = $("#moveControl_x").val(),
-            yshift = $("#moveControl_y").val(),
-            zshift = $("#moveControl_z").val(),
+    doMoleculaMove(axis, value) {
+        let xshift = "0",
+            yshift = "0",
+            zshift = "0",
             id = $("#moveMoleculaId").html();
+
+        if (axis === "all") {
+            xshift = $("#moveControl_x").val();
+            yshift = $("#moveControl_y").val();
+            zshift = $("#moveControl_z").val();
+        } else if (axis === "x") {
+            xshift = value;
+        } else if (axis === "y") {
+            yshift = value;
+        } else if (axis === "z") {
+            zshift = value;
+        }
         xshift = parseFloat(xshift);
         yshift = parseFloat(yshift);
         zshift = parseFloat(zshift);
         id = parseInt(id, 10);
+
         if (isNaN(xshift) || isNaN(yshift) || isNaN(zshift)){
             console.log("Parse error!");
             $("#moleculaMoveControls").hide();
@@ -897,11 +934,11 @@ class MolviEngine {
         }
         console.log('doMoleculaMove, id: ');
         console.log(id);
-        var cluster = null;
+        let cluster = null;
         doc.clusters.forEach(function (clust) {
-            if (clust.id == id) {
+            if (clust.id === id) {
                 cluster = clust;
-                return;
+                return 0;
             }
         });
         if (cluster === null) {
@@ -954,23 +991,23 @@ class MolviEngine {
             doc.links.splice(0, 1);
         }
 
-        var rmin,
+        let rmin,
             numberj;
 
         doc.clusters.forEach(function (cluster1) {
            doc.clusters.forEach(function (cluster2) {
                cluster1.atomList.forEach(function (atom1) {
                    cluster2.atomList.forEach(function (atom2) {
-                       if (atom1.id == atom2.id) {
-                           return;
+                       if (atom1.id === atom2.id) {
+
                        } else {
-                           var r1 = Math.pow(atom1.x - atom2.x, 2),
+                           let r1 = Math.pow(atom1.x - atom2.x, 2),
                                r2 = Math.pow(atom1.y - atom2.y, 2),
                                r3 = Math.pow(atom1.z - atom2.z, 2),
                                r = Math.sqrt(r1 + r2 + r3);
 
                            if(r <= radius) {
-                               var newlink = new Link(atom1.id, atom2.id);
+                               let newlink = new Link(atom1.id, atom2.id);
                                doc.links.push(newlink);
                            }
                        }
@@ -1108,7 +1145,7 @@ class MolviEngine {
                 "caption": cluster.caption,
                 "id": cluster.id,
                 "atoms": []
-            }
+            };
             //заполнение атомов кластера
             cluster.atomList.forEach(function (atom) {
                 var myatom = {
@@ -1117,7 +1154,7 @@ class MolviEngine {
                     z: atom.z,
                     name: atom.name,
                     mass: atom.mass
-                }
+                };
                 myCluster.atoms.push(myatom);
             });
             mydoc.clusters.push(myCluster);
@@ -1279,7 +1316,7 @@ class MolviView {
         view.scene.children.splice(0, this.scene.children.length);
         
         //добавить свет
-        var light1 = new THREE.DirectionalLight(0xffffff, 0.3),
+        let light1 = new THREE.DirectionalLight(0xffffff, 0.3),
             light2 = new THREE.AmbientLight(0xffffff, 0.5);
 
         view.lightGroup.add(light1);
@@ -1287,7 +1324,7 @@ class MolviView {
         view.scene.add(this.lightGroup);
     
         //добавить вспомогательные элементы
-        var helper = new THREE.AxesHelper(22),
+        let helper = new THREE.AxesHelper(22),
             grid = new THREE.GridHelper(10, 10);
         view.helpGroup.add(grid);
         view.helpGroup.add(helper);
@@ -1304,7 +1341,7 @@ class MolviView {
     }
 
     buildLineMesh(x1, y1, z1, x2, y2, z2, colorHex) {
-        var array = new Float32Array([x1, y1, z1, x2, y2, z2]),
+        let array = new Float32Array([x1, y1, z1, x2, y2, z2]),
             color = new THREE.Color(colorHex),
             material = new MeshLineMaterial({
                 color: color,
@@ -1312,11 +1349,11 @@ class MolviView {
                 lineWidth: 0.03
             });
 
-        var temp = new MeshLine();
+        let temp = new MeshLine();
         temp.setGeometry(array);
-        var geom = temp.geometry;
+        let geom = temp.geometry;
 
-        var mesh = new THREE.Mesh(geom, material);
+        let mesh = new THREE.Mesh(geom, material);
         return mesh;
     }
 
@@ -1329,9 +1366,11 @@ class MolviView {
 
     enableControls(){
         view.controls.enabled = true;
+        console.log("controls On");
     }
     disableControls(){
         view.controls.enabled = false;
+        console.log("controls OFF");
     }
 
     /**
@@ -1341,7 +1380,7 @@ class MolviView {
         view.raycaster.setFromCamera(view.mousePosition, view.camera);
         //console.log(mousePosition);
 
-        var atoms = view.atomGroup.children,
+        let atoms = view.atomGroup.children,
             links = view.linkGroup.children,
             intersects = view.raycaster.intersectObjects(atoms),
             linkInter = view.raycaster.intersectObjects(links);
@@ -1353,7 +1392,7 @@ class MolviView {
         //var highlighted = view.highlights;
         view.highlights = [];
 
-        for (var i = 0; i < atoms.length; i++){
+        for (let i = 0; i < atoms.length; i++){
             atoms[i].material =  view.atomMaterials[i]; //engine.buildAtomMaterial(atoms[i].name);
         }
 
@@ -1370,8 +1409,8 @@ class MolviView {
             view.highlights.push(intersects[0]);
         }
 
-        for (var i = 0; i < intersects.length; i++) {
-            if (view.highlights.length == 0) {
+        for (let i = 0; i < intersects.length; i++) {
+            if (view.highlights.length === 0) {
                 view.highlights.push(intersects[i]);
             }
             if (intersects[i].distance < view.highlights[0].distance) {
@@ -1383,7 +1422,7 @@ class MolviView {
 
         // подсветка выделенного
 
-        for (var i = 0; i < view.highlights.length; i++) {
+        for (let i = 0; i < view.highlights.length; i++) {
             view.highlights[i].object.material = engine.selectionMaterial();
         }
 
@@ -1446,9 +1485,10 @@ function selectPanel(panelName) {
 }
 
 function openChangeLinkLengthPanel(linkid, oldLength) {
-    $("#linkChangeLengthControls").fadeIn(500);
+    closeControls();
+    $(".control-link-length").fadeIn(200);
 
-    $("input[name=linkLengthOld]").val(oldLength);
+    $("#linkLengthOld").html(oldLength);
     $("input[name=linkLengthNew]").val(oldLength);
     $("input[name=linkChangeLengthId]").val(linkid);
     view.disableControls();
@@ -1482,7 +1522,6 @@ function changeLinkLength() {
         }
 
     });
-    closeChangeLinkLengthPanel();
 }
 
 function openLinkRotationPanel(id, from, to) {
@@ -1580,7 +1619,7 @@ function deleteValenceAngle(id) {
 }
 
 
-var engine = new MolviEngine(),
+let engine = new MolviEngine(),
     view = new MolviView(),
     doc = new MolviDocument();
 
@@ -1589,7 +1628,6 @@ function doEditValenceAngle() {
     let id = $(".control-valence-angle .input-id").val(),
         angle = $(".control-valence-angle .input-angle").val(),
         csrf_token = $("input[name=csrfmiddlewaretoken]").val();
-
 
     $.ajax({
         url: "/molvi/valence-angles-change",
@@ -1611,37 +1649,6 @@ function doEditValenceAngle() {
 }
 
 
-$(document).ready(function(){
-    engine.view = view;
-    view.engine = engine;
-    MolviEngine.instance = engine;
-    MolviView.instance = view;
-
-
-    engine.userMessage();
-
-    engine.selectMode("none");
-    //добавление обработчиков
-    var display = document.getElementById("display");
-    display.addEventListener("mousemove",  MolviEngine.onMouseMove, false);
-    display.addEventListener("mousedown",  MolviEngine.onMouseDown, false);
-
-    view.init();
-    
-    //LoadAtoms(true);
-
-    var inputElement = document.getElementById('traceRange');
-    inputElement.onkeypress = engine.autoTraceKeyPressed;
-    inputElement.value = 1.4;
-
-    //загрузить активный файл с сервера
-    engine.LoadAtomDataFromServer(true);
-
-
-    selectPanel("Atoms");
-
-    console.log(htmlLabels.createLabel());
-});
 
 let htmlLabels = {
     x: 1,
@@ -1687,3 +1694,65 @@ let htmlLabels = {
     }
     
 };
+
+function closeControls() {
+    $(".controls").hide();
+}
+
+let dihedralAngleCreator = {
+    collected: [],  // атомы для создания двугранного угла
+    addAtom: function (id) {
+        // adding atom for dihedral angle creation
+        this.collected.push(id);
+        let msg = "Выбрано атомов " + this.collected.length + "/4";
+        $(".dihedralAngles .messages .text").html(msg);
+
+        if (this.collected.length >= 4) {
+            console.log(this.collected);
+        }
+    },
+    start: function () {
+        this.collected = [];
+        engine.unselectAtoms();
+        $(".dihedralAngles .messages").show();
+        $(".dihedralAngles .messages .text").html("Выбрано атомов: 0/4");
+        engine.controlMode = "dihedral creation";
+    },
+    stop: function () {
+        $(".dihedralAngles .messages").hide();
+    }
+};
+
+
+$(document).ready(function(){
+    engine.view = view;
+    view.engine = engine;
+    MolviEngine.instance = engine;
+    MolviView.instance = view;
+
+    engine.userMessage();
+
+    engine.selectMode("none");
+    //добавление обработчиков
+    let display = document.getElementById("display");
+    display.addEventListener("mousemove",  MolviEngine.onMouseMove, false);
+    display.addEventListener("mousedown",  MolviEngine.onMouseDown, false);
+
+    view.init();
+
+    //LoadAtoms(true);
+
+    let inputElement = document.getElementById('traceRange');
+    inputElement.onkeypress = engine.autoTraceKeyPressed;
+    inputElement.value = 1.6;
+
+    //загрузить активный файл с сервера
+    engine.LoadAtomDataFromServer(true);
+
+
+    selectPanel("Atoms");
+
+    console.log(htmlLabels.createLabel());
+
+    closeControls();
+});

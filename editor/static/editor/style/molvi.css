@@ -1,3 +1,7 @@
+.t1-5 {
+  font-family: "Times New Roman", serif;
+  font-size: 16px; }
+
 .layout {
   width: 800px;
   margin: auto; }
@@ -51,6 +55,7 @@
     .layout .body .display {
       width: 600px;
       box-sizing: border-box;
+      overflow: hidden;
       text-align: center;
       margin: 5px 0 0 0;
       position: relative; }
@@ -71,7 +76,8 @@
     padding: 5px;
     margin: 1px 0 0 10px;
     cursor: default;
-    border: 1px solid transparent; }
+    border: 1px solid transparent;
+    font-size: 0; }
     .layout .atomsView .atomView .id {
       color: gray; }
     .layout .atomsView .atomView:hover {
@@ -96,10 +102,21 @@
     display: table;
     width: 100%;
     cursor: default; }
+    .layout .linksView img {
+      border: 1px solid transparent; }
+      .layout .linksView img:hover {
+        border: 1px solid #000;
+        background: lightskyblue; }
     .layout .linksView .link {
-      display: table-row;
       border: 1px solid transparent;
-      padding: 1px 1px 1px 6px; }
+      padding: 1px 1px 1px 6px;
+      font-size: 0;
+      margin: 0 0 5px 0; }
+      .layout .linksView .link .text {
+        display: inline-block;
+        vertical-align: top; }
+      .layout .linksView .link .name {
+        width: 105px; }
       .layout .linksView .link:hover {
         background: lightsteelblue;
         border: 1px solid #000; }
@@ -116,9 +133,6 @@
       box-sizing: border-box;
       text-align: center;
       cursor: default; }
-      .layout .linksView .deleteLink:hover {
-        border: 1px solid #000;
-        background: lightskyblue; }
 
 .buttons {
   margin: 5px 0 5px 0; }
@@ -284,23 +298,23 @@
   color: gray;
   pointer-events: none; }
 
-#linkChangeLengthControls {
-  display: none; }
-  #linkChangeLengthControls .title {
-    margin: 5px;
-    font-size: 1.2em; }
-  #linkChangeLengthControls .line {
-    margin-top: 10px;
-    margin-left: 30px; }
-    #linkChangeLengthControls .line .name {
-      width: 130px;
-      display: inline-block; }
-    #linkChangeLengthControls .line .value {
-      display: inline-block; }
-  #linkChangeLengthControls .flat-button {
-    width: 100px; }
-  #linkChangeLengthControls .buttons {
-    margin-top: 10px; }
+#linkChangeLengthControls .title {
+  margin: 5px;
+  font-size: 1.2em; }
+#linkChangeLengthControls .line {
+  margin-top: 10px;
+  margin-left: 30px; }
+  #linkChangeLengthControls .line .name {
+    width: 180px;
+    display: inline-block; }
+  #linkChangeLengthControls .line .value {
+    display: inline-block; }
+    #linkChangeLengthControls .line .value input {
+      width: 60px; }
+#linkChangeLengthControls .flat-button {
+  width: 100px; }
+#linkChangeLengthControls .buttons {
+  margin-top: 10px; }
 
 .flat-button {
   display: inline-block;
@@ -344,12 +358,12 @@
       vertical-align: bottom;
       display: inline-block;
       text-decoration: underline;
-      cursor: pointer; }
+      cursor: default; }
     .valenceAnglesView .valence-angle .buttons .deleteva {
       border: 1px solid transparent;
       text-decoration: none;
       width: 20px;
-      box-sizing: border-box;
+      box-sizing: content-box;
       text-align: center; }
       .valenceAnglesView .valence-angle .buttons .deleteva:hover {
         border: 1px solid black; }
@@ -357,6 +371,8 @@
       border: 1px solid transparent; }
       .valenceAnglesView .valence-angle .buttons .editva:hover {
         border: 1px solid #000; }
+  .valenceAnglesView .valence-angle .value {
+    display: inline-block; }
 
 .control_board {
   padding: 10px; }
@@ -389,7 +405,55 @@
 .html-label {
   position: absolute;
   text-align: left;
-  text-shadow: black 0 0 2px;
-  color: white; }
+  text-shadow: black 0 0 1px;
+  color: white;
+  pointer-events: none; }
+
+.control-cluster-position .line {
+  margin: 3px 0 3px 30px; }
+  .control-cluster-position .line span {
+    width: 20px;
+    display: inline-block;
+    cursor: default; }
+    .control-cluster-position .line span:first-child {
+      width: 130px; }
+    .control-cluster-position .line span:nth-child(2) {
+      border: 1px solid transparent; }
+      .control-cluster-position .line span:nth-child(2):hover {
+        border: 1px solid #000; }
+    .control-cluster-position .line span:nth-child(3) {
+      border: 1px solid transparent; }
+      .control-cluster-position .line span:nth-child(3):hover {
+        border: 1px solid #000; }
+  .control-cluster-position .line input {
+    width: 30px;
+    text-align: right; }
+.control-cluster-position .buttons .flat-button {
+  width: 100px;
+  box-sizing: border-box; }
+
+.hidden {
+  display: none; }
+
+.dihedralAngles {
+  position: relative; }
+  .dihedralAngles .title {
+    font-size: 1.1em;
+    margin: 10px 0 0 10px; }
+  .dihedralAngles .text {
+    text-align: center;
+    margin: 10px; }
+  .dihedralAngles .messages {
+    position: absolute;
+    background: white;
+    z-index: 1;
+    margin: 10px;
+    border: 1px solid #000; }
+  .dihedralAngles .new-dihedral-angle-button {
+    width: 108px;
+    margin: 0 0 5px 5px; }
+  .dihedralAngles .buttons .flat-button {
+    width: 130px;
+    margin-left: 10px; }
 
 /*# sourceMappingURL=molvi.css.map */

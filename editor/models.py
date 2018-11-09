@@ -10,6 +10,29 @@ class Document(models.Model):
 	is_active = models.BooleanField(default=False)
 
 
+# кластер (набор молекул)
+class Cluster(models.Model):
+	document = models.ForeignKey(Document, on_delete=models.CASCADE)
+	caption = models.TextField(default="cluster")
+
+
+# двугранный угол (4 атома вряд, т.е. 3 связи)
+class DihedralAngle(models.Model):
+	name = models.TextField(default="Двугранный угол")
+	document = models.ForeignKey(Document, on_delete=models.CASCADE)
+
+
+class ValenceAngle(models.Model):
+	name = models.TextField(default="Валентный угол")
+	value = models.FloatField(default=0)
+	document = models.ForeignKey(Document, on_delete=models.CASCADE)
+
+
+# содержание .mol file-a
+class MolFile(models.Model):
+	text = models.TextField(default="")
+
+
 # Create your models here.
 class Atom(models.Model):
 	document = models.ForeignKey(Document, on_delete=models.CASCADE)
@@ -20,12 +43,9 @@ class Atom(models.Model):
 	color = models.TextField(default="#62A6DA")
 	mass = models.FloatField(default=0)  #
 	radius = models.FloatField(default=1)  # радиус атома в ангстремах
-
-
-# кластер (набор молекул)
-class Cluster(models.Model):
-	document = models.ForeignKey(Document, on_delete=models.CASCADE)
-	caption = models.TextField(default="cluster")
+	molfile = models.ForeignKey(  # содержание .mol файла, из которого взять атом
+		MolFile, on_delete=models.CASCADE, null=True)
+	molfileindex = models.IntegerField(default=-1)  # индекс атома внутри исходного .mol файла
 
 
 # содержание кластера
@@ -48,26 +68,13 @@ class Link(models.Model):
 		return ans
 
 
-# двугранный угол (4 атома вряд, т.е. 3 связи)
-class DihedralAngle(models.Model):
-	name = models.TextField(default="Двугранный угол")
-	document = models.ForeignKey(Document, on_delete=models.CASCADE)
-
-
-# контент для двугранного угла
-class DihedralAngleLink(models.Model):
-	angle = models.ForeignKey(DihedralAngle, on_delete=models.CASCADE)
-	link = models.ForeignKey(Link, on_delete=models.CASCADE)
-
-
-class ValenceAngle(models.Model):
-	name = models.TextField(default="Валентный угол")
-	document = models.ForeignKey(Document, on_delete=models.CASCADE)
-
-
 # контент для валентного угла
 class ValenceAngleLink(models.Model):
 	angle = models.ForeignKey(ValenceAngle, on_delete=models.CASCADE)
 	link = models.ForeignKey(Link, on_delete=models.CASCADE)
 
 
+# контент для двугранного угла
+class DihedralAngleLink(models.Model):
+	angle = models.ForeignKey(DihedralAngle, on_delete=models.CASCADE)
+	link = models.ForeignKey(Link, on_delete=models.CASCADE)

@@ -1,3 +1,7 @@
+.t1-5
+  font-family: "Times New Roman", serif
+  font-size: 16px
+
 .layout
   .table
     display: table
@@ -54,6 +58,7 @@
     .display
       width: 600px
       box-sizing: border-box
+      overflow: hidden
       //padding: 10px
       text-align: center
       //background: pink
@@ -83,6 +88,7 @@
       margin: 1px 0 0 10px
       cursor: default
       border: 1px solid transparent
+      font-size: 0
       .id
         color: gray
       &:hover
@@ -109,11 +115,21 @@
     display: table
     width: 100%
     cursor: default
+    img
+      border: 1px solid transparent
+      &:hover
+        border: 1px solid #000
+        background: lightskyblue
     .link
-      display: table-row
       border: 1px solid transparent
       padding: 1px 1px 1px 6px
-      
+      font-size: 0
+      margin: 0 0 5px 0
+      .text
+        display: inline-block
+        vertical-align: top
+      .name
+        width: 105px
       &:hover
         background: lightsteelblue
         border: 1px solid #000
@@ -130,10 +146,7 @@
       box-sizing: border-box
       text-align: center
       cursor: default
-      &:hover
-        border: 1px solid #000
-        background: lightskyblue
-  
+
 .buttons
   margin: 5px 0 5px 0
 
@@ -304,7 +317,6 @@
   pointer-events: none
 
 #linkChangeLengthControls
-  display: none
   .title
     margin: 5px
     font-size: 1.2em
@@ -312,10 +324,12 @@
     margin-top: 10px
     margin-left: 30px
     .name
-      width: 130px
+      width: 180px
       display: inline-block
     .value
       display: inline-block
+      input
+        width: 60px
   .flat-button
     width: 100px
   .buttons
@@ -368,12 +382,12 @@
         vertical-align: bottom
         display: inline-block
         text-decoration: underline
-        cursor: pointer
+        cursor: default
       .deleteva
         border: 1px solid transparent
         text-decoration: none
         width: 20px
-        box-sizing: border-box
+        box-sizing: content-box
         text-align: center
         &:hover
           border: 1px solid black
@@ -381,6 +395,8 @@
         border: 1px solid transparent
         &:hover
           border: 1px solid #000
+    .value
+      display: inline-block
 
 .control_board
   padding: 10px
@@ -420,5 +436,56 @@
 .html-label
   position: absolute
   text-align: left
-  text-shadow: black 0 0 2px
+  text-shadow: black 0 0 1px
   color: white
+  pointer-events: none
+
+.control-cluster-position
+  .line
+    margin: 3px 0 3px 30px
+    span
+      width: 20px
+      display: inline-block
+      cursor: default
+      &:first-child
+        width: 130px
+      &:nth-child(2)
+        border: 1px solid transparent
+        &:hover
+          border: 1px solid #000
+      &:nth-child(3)
+        border: 1px solid transparent
+        &:hover
+          border: 1px solid #000
+    input
+      width: 30px
+      text-align: right
+  .buttons
+    .flat-button
+      width: 100px
+      box-sizing: border-box
+
+.hidden
+  display: none
+
+.dihedralAngles
+  position: relative
+  .title
+    font-size: 1.1em
+    margin: 10px 0 0 10px
+  .text
+    text-align: center
+    margin: 10px
+  .messages
+    position: absolute
+    background: white
+    z-index: 1
+    margin: 10px
+    border: 1px solid #000
+  .new-dihedral-angle-button
+    width: 108px
+    margin: 0 0 5px 5px
+  .buttons
+    .flat-button
+      width: 130px
+      margin-left: 10px

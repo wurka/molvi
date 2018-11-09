@@ -80,8 +80,19 @@
                         <div class="linksHolder viewPanel" id="panelLinks">
                             <div class="linksView"></div>
                         </div>
-                        <div class="dihedralAngle viewPanel" id="panelDihedralAngles">
-                            dihedral angle
+                        <div class="dihedralAngles viewPanel" id="panelDihedralAngles">
+                            <div class="flat-button new-dihedral-angle-button" onclick="dihedralAngleCreator.start()">Создать</div>
+                            <div class="messages">
+                                <div class="title">Создание двугранного угла:</div>
+                                <div class="text">...</div>
+                                <div class="buttons">
+                                    <div class="flat-button" onclick="dihedralAngleCreator.stop()">Отмена</div>
+                                </div>
+                            </div>
+
+                            <div class="dihedralAnglesList">
+                                empy
+                            </div>
                         </div>
                         <div class="valenceAngle viewPanel" id="panelValenceAngles">
                             <div class="buttons">
@@ -94,7 +105,7 @@
                             <input title="linkRotation_link" type="text" name="linkRotation_link">
                             <input title="linkRotation_atom1" type="text" name="linkRotation_atom1">
                             <input title="linkRotation_atom2" type="text" name="linkRotation_atom2">
-                            <div class="line" onclick="document.getElementById('linkRotationDegrees').focus()">
+                            <div class="line">
                                 <div class="name">Повернуть, град</div>
                                 <div class="value"><input title="градусов" type="text" name="linkRotation_degrees" id="linkRotationDegrees"></div>
                             </div>
@@ -127,7 +138,7 @@
                                 <img src="{% static 'editor/images/save.png' %}" class="unselectedIcon" onclick="view.showSaveFileDialog()" id="icon_saveDocument" title="Сохранить документ"/>
                             </div>
                             <div class="modeIcon">
-                                <input type="text" name="" id="traceRange" onclick="document.getElementById(this.id).focus()" onkeydown="engine.autoTraceKeyPressed" onfocus="view.disableControls()" onfocusout="view.enableControls()">
+                                <input type="text" name="" id="traceRange" onclick="document.getElementById(this.id).focus()" onkeydown="engine.autoTraceKeyPressed" onfocusout="view.enableControls()">
                                 <img src="{% static 'editor/images/autotrace.png' %}" class="unselectedIcon" onclick="engine.executeAutoTrace()" id="icon_autotraceUnselected"/>
                             </div>
                             <div class="modeIcon">
@@ -143,19 +154,7 @@
                                 <div class="buttons" id="infoCloseButton" onclick='engine.userMessage()'>close</div>
                             </div>                            
                         </div>
-                        <div id="moleculaMoveControls">
-                            <div class="title">Перемещение молекулы</div>
-                            <div class="moveAction_move_content moveActionContent">
-                                <div class="hidden" id="moveMoleculaId"></div>
-                                <div class='inputLine'><span>x</span><input type="text" id='moveControl_x' onclick='document.getElementById(this.id).focus()'></div>
-                                <div class='inputLine'><span>y</span><input type="text" id='moveControl_y' onclick='document.getElementById(this.id).focus()'></div>
-                                <div class='inputLine'><span>z</span><input type="text" id='moveControl_z' onclick='document.getElementById(this.id).focus()'></div>
-                                <div class="buttons">
-                                    <div class="button ok" onclick="engine.doMoleculaMove()">OK</div>
-                                    <div class="button cancel" onclick="engine.closeMoveControls()">Отмена</div>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- delete me if you find it after 13-10-2018 -->
 
                         <div id="transformRotate">
                             <input type="hidden" name="rotateOrigin" id="rotateOrigin" class="origin">
@@ -176,29 +175,30 @@
                                 <div class="mybutton" onclick="engine.closeRotationHtml()">Oтмена</div>
                             </div>
                         </div>
-                        <div class="display" id="display"></div>
+                        <div class="display" id="display" onmouseleave="view.disableControls()" onmouseenter="view.enableControls()" u></div>
                     </div>
                 </div>
             </div>
             
-            <div class="control_board" onmouseover="view.disableControls()" onmouseleave="view.enableControls()">
+            <div class="control_board">
                 <div class="controls control-link-length">
                     <div id="linkChangeLengthControls">
                         <input type="hidden" name="linkChangeLengthId">
                         <div class="title">Изменение длины связи</div>
                         <div class="line">
-                            <div class="name">Текущая длина:</div>
-                            <div class="value disabled"><input type="text" name="linkLengthOld" value="1" title="Текущая длина"></div>
+                            <div class="name">Текущая длина, ангстрем: </div>
+                            <span id="linkLengthOld">n/d</span>
+                            <div class="value"></div>
                         </div>
-                        <div class="line" onclick="document.getElementById('linkLengthNewInput').focus();">
-                            <div class="name">Новая длина:</div>
-                            <div class="value disabled">
+                        <div class="line">
+                            <div class="name">Новая длина, ангстрем:</div>
+                            <div class="value">
                                 <input type="text" name="linkLengthNew" value="1" id="linkLengthNewInput" title="Новая длина">
                             </div>
                         </div>
                         <div class="buttons">
                             <div class="flat-button" onclick="changeLinkLength()">OK</div>
-                            <div class="flat-button" onclick="closeChangeLinkLengthPanel()">Отмена</div>
+                            <div class="flat-button" onclick="closeControls()">Отмена</div>
                         </div>
                     </div>
                 </div>
@@ -206,18 +206,44 @@
                     <div id="valence-angle-controls">
                         <div class="title">Изменить валентный угол</div>
                         <input type="hidden" name="id" class="input-id" value="0">
-                        <div class="line" style="display: none">
+                        <div class="line">
                             <div class="name">Текущее значение, град</div>
-                            <div class="value"><input type="text" title="Текущее значение"></div>
+                            <div class="value current-value">n/d</div>
                         </div>
                         <div class="line">
-                            <div class="name">Изменить на, град</div>
+                            <div class="name">Новое значение, град</div>
                             <div class="value"><input type="text" title="Новое значение" class="input-angle"></div>
                         </div>
                         <div class="buttons">
                             <div class="flat-button" onclick="doEditValenceAngle()">OK</div>
-                            <div class="flat-button" onclick="closeChangeLinkLengthPanel()">Отмена</div>
+                            <div class="flat-button" onclick="closeControls()">Отмена</div>
                         </div>
+                    </div>
+                </div>
+                <div class="controls control-cluster-position">
+                    <div class="hidden" id="moveMoleculaId"></div>
+                    <div class="title">Перемещение кластера</div>
+                    <div class="line">
+                        <span>Ось Х, анкстрем: </span>
+                        <span onclick="engine.doMoleculaMove('x', 1)"> +1 </span>
+                        <span onclick="engine.doMoleculaMove('x', -1)"> -1 </span>
+                        <input type="text" title="x" id='moveControl_x' value="0">
+                    </div>
+                    <div class="line">
+                        <span>Ось Y, анкстрем: </span>
+                        <span onclick="engine.doMoleculaMove('y', 1)"> +1 </span>
+                        <span onclick="engine.doMoleculaMove('y', -1)"> -1 </span>
+                        <input type="text" title="y" id='moveControl_y' value="0">
+                    </div>
+                    <div class="line">
+                        <span>Ось Z, анкстрем: </span>
+                        <span onclick="engine.doMoleculaMove('z', 1)"> +1 </span>
+                        <span onclick="engine.doMoleculaMove('z', -1)"> -1 </span>
+                        <input type="text" title="z" id='moveControl_z' value="0">
+                    </div>
+                    <div class="buttons">
+                        <div class="flat-button" onclick="engine.doMoleculaMove('all')">OK</div>
+                        <div class="flat-button" onclick="closeControls()">Отмена</div>
                     </div>
                 </div>
             </div>

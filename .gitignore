@@ -6,3 +6,5 @@
 /editor/migrations/__pycache__
 /editor/static/editor/style/*.map
 /molvi/__pycache__
+/editor/migrations/0003_valenceangle_value.py
+/editor/migrations/0004_auto_20181022_0840.py

@@ -5,13 +5,32 @@ from .views_utils import *
 from .mathutils import rotate_by_deg
 from .models import Document, Link, Atom, Cluster, ClusterAtom, DihedralAngle, DihedralAngleLink
 from .models import ValenceAngle, ValenceAngleLink
+from .models import MolFile
 import os
 import json
 from .geom import Point, Line, Plane
-from math import sqrt, pi
+from math import sqrt, pi, acos
 from django.db.transaction import atomic
 from .geom import Quaternion, Point
 from pyquaternion import Quaternion as Quater
+
+
+class MolFileReadingException(Exception):
+	message = ""
+	def __init__(self, message):
+		self.message = message
+
+
+def angle_from_atoms(atom1, atom2, atom3):
+	# вычисление угла, образованного в пространстве атомами atom1, atom2 и atom3
+	ax, ay, az = atom1.x - atom2.x, atom1.y - atom2.y, atom1.z - atom2.z
+	bx, by, bz = atom3.x - atom2.x, atom3.y - atom2.y, atom3.z - atom2.z
+	value = ax * bx + ay * by + az * bz
+	moda = sqrt(ax ** 2 + ay ** 2 + az ** 2)
+	modb = sqrt(bx ** 2 + by ** 2 + bz ** 2)
+	value = value / moda / modb
+	value = acos(value) / pi * 180
+	return value
 
 
 # Create your views here.
@@ -23,11 +42,12 @@ def open_file_dialog(request):
 	return HttpResponse("OK")
 
 
-def mol_file_data(file_name):
+def mol_file_data(file_name: str, molfile: MolFile = None):
 	"""
 	Return Atom array, contains data from .mol file
 	with name <file_name>
 	:param file_name: name of .mol file
+	:param molfile: models.ModelFile object
 	:return: json string
 	"""
 	ans = ""
@@ -45,11 +65,15 @@ def mol_file_data(file_name):
 	try:
 		with open(file_name) as f:
 			lines = f.readlines()
+			f.seek(0)
+			text = f.read()
+			molfile = MolFile.objects.create(text=text)
+
 	except FileNotFoundError as ex:
 		ans += "error while reading .mol data. "
 		ans += str(ex)
 		# ans += str(os.listdir())
-		return Http404(ans + ans)
+		raise MolFileReadingException("File not found")
 
 	mode = "scan"  # активный режим работы
 	n = len(lines)
@@ -65,6 +89,14 @@ def mol_file_data(file_name):
 			if "[Atoms]" in line:
 				dprint("GO readAtoms")
 				mode = "readAtoms"
+			if "[Matrix Z]" in line:
+				dprint("Go readMatrixZ")
+				mode = "readMatrixZ"
+		if mode == "readMatrixZ":
+			i += 1
+			if line.isspace():
+				continue
+
 		elif mode == "readAtoms":  # считывание информации об атомах
 			if line.isspace():  # пустая строка - это конец считывания
 				# mode = "scan"
@@ -81,6 +113,9 @@ def mol_file_data(file_name):
 
 			first = elems[0]
 			try:
+				if first == "[Atoms]":
+					i += 1
+					continue
 				dprint("first: " + str(first) + "<br/>")
 				dprint(elems)
 				number = int(first)
@@ -91,7 +126,9 @@ def mol_file_data(file_name):
 				az = float(elems[3])
 				name = elems[4]
 				mass = int(elems[5])
-				new_atom = Atom(x=ax, y=ay, z=az, name=name, mass=mass, document=active_doc)
+				new_atom = Atom(
+					x=ax, y=ay, z=az, name=name, mass=mass, document=active_doc, molfileindex=number)
+				new_atom.molfile = molfile
 				new_atom.save()
 				atoms.append(new_atom)
 
@@ -99,6 +136,8 @@ def mol_file_data(file_name):
 				dprint("get_last_mol_file error: " + str(ex))
 				mode = "scan"
 				continue
+		elif mode == "readMatrixZ":
+			pass
 		i += 1
 
 	# считывание из файла завершено заполнен список atoms
@@ -149,12 +188,19 @@ def get_last_mol_file(request):
 
 
 def get_mol_file(request):
+	# чтение .mol файла GET['filename']
 	if 'filename' not in request.GET:
 		return Http404("There is no <filename> parameter!")
 	file_name = request.GET['filename']
 	mol_dir = os.path.abspath(os.path.join("editor", "files", "mols"))
 	file_name = os.path.join(mol_dir, file_name)
-	atom_list = mol_file_data(file_name)
+	try:
+		with open(file_name, "tr") as file:
+			text = file.read()
+			molfile = MolFile.objects.create(text=text)
+			atom_list = mol_file_data(file_name, molfile)
+	except Exception as ex:
+		return HttpResponse("Error in file reading: " + str(ex))
 
 	return HttpResponse(atom_list)
 
@@ -404,6 +450,10 @@ def valence_angle_change(request):
 		some_a.z = rotated[2] + a2.z
 		some_a.save()
 
+	value = angle_from_atoms(a1, a2, a3)
+	angle.value = value
+	angle.save()
+
 	return HttpResponse("OK")
 
 
@@ -428,10 +478,53 @@ def valence_angles_autotrace(request):
 					link1.atom1 == link2.atom1 or link1.atom1 == link2.atom2
 					or link1.atom2 == link2.atom1 or link1.atom2 == link2.atom2):
 
+				# определение "красивого" порядка атомов
+				atom1, atom2, atom3 = None, None, None
+				if link1.atom1 == link2.atom1:
+					atom2 = link1.atom1
+					if link1.atom2.id < link2.atom2.id:
+						atom1 = link1.atom2
+						atom3 = link2.atom2
+					else:
+						atom1 = link2.atom2
+						atom3 = link1.atom2
+				elif link1.atom1 == link2.atom2:
+					atom2 = link1.atom1
+					if link1.atom2.id < link2.atom1.id:
+						atom1 = link1.atom2
+						atom3 = link2.atom1
+					else:
+						atom1 = link2.atom1
+						atom3 = link1.atom2
+				elif link1.atom2 == link2.atom1:
+					atom2 = link1.atom2
+					if link1.atom1.id < link2.atom2.id:
+						atom1 = link1.atom1
+						atom3 = link2.atom2
+					else:
+						atom1 = link2.atom2
+						atom3 = link1.atom1
+				else:  # link1.atom2 == link2.atom2
+					atom2 = link1.atom2
+					if link1.atom1.id < link2.atom1.id:
+						atom1 = link1.atom1
+						atom3 = link2.atom1
+					else:
+						atom1 = link2.atom1
+						atom3 = link1.atom1
+
 				# создание нового валентного угла в БД
+				value = angle_from_atoms(atom1, atom2, atom3)
+
 				new_va = ValenceAngle.objects.create(
 					document=document,
-					name="{}-{}".format(link1.id, link2.id))
+					name="{}{}-{}{}-{}{}".format(
+						atom1.name, atom1.id,
+						atom2.name, atom2.id,
+						atom3.name, atom3.id
+					),
+					value=value
+				)
 				ValenceAngleLink.objects.create(angle=new_va, link=link1)
 				ValenceAngleLink.objects.create(angle=new_va, link=link2)
 			j += 1
@@ -488,7 +581,8 @@ def get_active_data(request):
 	slinks = Link.objects.filter(document=sdoc)
 	links = [{
 		"id": slink.id, "atom1": slink.atom1.id, "atom2": slink.atom2.id,
-		"length": slink.get_length()
+		"name": "{}{}-{}{}".format(slink.atom1.name, slink.atom1.id, slink.atom2.name, slink.atom2.id),
+		"value": round(slink.get_length(), 3)
 	} for slink in slinks]
 	bdatoms = Atom.objects.filter(document=sdoc)
 	atoms = [{
@@ -534,6 +628,7 @@ def get_active_data(request):
 			valence_angles.append({
 				"id": angle.id,
 				"name": angle.name,
+				"value": angle.value,
 				"atom1": buf[0],
 				"atom2": buf[1],
 				"atom3": buf[2],
