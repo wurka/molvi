@@ -19,6 +19,7 @@ import numpy as np
 
 class MolFileReadingException(Exception):
 	message = ""
+
 	def __init__(self, message):
 		self.message = message
 
@@ -65,6 +66,8 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 	mz_cline = 0
 	mz_crow = 0
 	mz_last_line = 0
+	mz_next_column = 0
+
 	matrix_z_lines = list()
 	matrix_z = None  # type: np.array
 	active_doc = None
@@ -95,13 +98,16 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 		if mode == "end":
 			break
 
-		line = lines[i-1]
+		line = lines[i-1].split("//")[0]
+		if not line:
+			continue
 		ans += dprint(">> " + line + "<br/>")
 
 		if mode == "scan":
 			if "[Atoms]" in line:
 				dprint("GO readAtoms")
 				mode = "readAtoms"
+				continue
 			if "[Matrix Z]" in line:
 				dprint("Go readMatrixZ")
 				mode = "readMatrixZ"
@@ -128,6 +134,7 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 							mz_skipped = True
 							mz_espec -= 1
 							mz_last_line = mz_cline
+							mz_next_column += len(splited) - 1
 						else:  # already skipped
 							mz_espec -= 1
 
@@ -141,6 +148,7 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 							mz_skipped = False
 							mz_espec = 2
 							mz_cline = mz_last_line
+							mz_crow = mz_next_column
 							continue
 						for ind in range(len(splited) - 1):
 							try:
