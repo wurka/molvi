@@ -13,6 +13,8 @@ from math import sqrt, pi, acos
 from django.db.transaction import atomic
 from .geom import Quaternion, Point
 from pyquaternion import Quaternion as Quater
+from re import sub as resub
+import numpy as np
 
 
 class MolFileReadingException(Exception):
@@ -55,6 +57,16 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 	ValenceAngle.objects.all().delete()
 	ValenceAngleLink.objects.all().delete()
 
+
+	matrix_z_coordinates = "unknown"
+	matrix_z_units = "unknown"
+	mz_espec = 2
+	mz_skipped = False
+	mz_cline = 0
+	mz_crow = 0
+	mz_last_line = 0
+	matrix_z_lines = list()
+	matrix_z = None  # type: np.array
 	active_doc = None
 	try:
 		active_doc = Document.objects.get(is_active=True)
@@ -79,10 +91,11 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 	n = len(lines)
 	i = 0
 	while i < n:  # цикл по строкам файла
+		i += 1
 		if mode == "end":
 			break
 
-		line = lines[i]
+		line = lines[i-1]
 		ans += dprint(">> " + line + "<br/>")
 
 		if mode == "scan":
@@ -92,20 +105,62 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 			if "[Matrix Z]" in line:
 				dprint("Go readMatrixZ")
 				mode = "readMatrixZ"
+				continue
 		if mode == "readMatrixZ":
-			i += 1
 			if line.isspace():
 				continue
+			if not line.startswith("[") and i != n:  # not end of readMatrixZ section and not end of file
+				matrix_z_lines.append(resub(r"[ \t\r\n]+",  " ", line.replace("\r", "").replace("\n", "")))
+			else:  # end of readMatrixZ
+				mz_size = len(atoms) * 3
+				matrix_z = np.zeros((mz_size, mz_size), dtype=np.float32)
+
+				for mline in matrix_z_lines:
+					if mline.startswith("Coordinates="):
+						matrix_z_coordinates = mline.split('=')[1]
+						continue
+					if mline.startswith("Units="):
+						matrix_z_units = mline.split('=')[1]
+						continue
+					splited = list(filter(None, mline.split(" ")))
+					if len(splited) != mz_espec:
+						if not mz_skipped:  # first time skipped
+							mz_skipped = True
+							mz_espec -= 1
+							mz_last_line = mz_cline
+						else:  # already skipped
+							mz_espec -= 1
+
+					if not mz_skipped:  # normal line
+						for ind in range(mz_espec-1):
+							matrix_z[mz_cline, mz_crow+ind] = float(splited[ind+1])
+						mz_espec += 1
+						mz_cline += 1
+					else:  # line with skip
+						if len(splited) != mz_espec:
+							mz_skipped = False
+							mz_espec = 2
+							mz_cline = mz_last_line
+							continue
+						for ind in range(len(splited) - 1):
+							try:
+								val = float(splited[ind+1])
+								matrix_z[mz_cline, mz_crow + ind] = float(splited[ind + 1])
+							except ValueError:
+								mz_espec = 2
+								continue
+						mz_espec += 1
+						mz_cline += 1
+
+				mode = "scan"
 
 		elif mode == "readAtoms":  # считывание информации об атомах
 			if line.isspace():  # пустая строка - это конец считывания
 				# mode = "scan"
 				dprint("END: readAtoms: finded end<br/>")
-				mode = "end"
-				i += 1
+				mode = "scan"
 				continue
 			if line.startswith('//') or line.lower().startswith("length") or line.lower().startswith("count"):
-				i += 1
 				continue
 
 			elems = line.strip().split(' ')
@@ -114,7 +169,6 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 			first = elems[0]
 			try:
 				if first == "[Atoms]":
-					i += 1
 					continue
 				dprint("first: " + str(first) + "<br/>")
 				dprint(elems)
@@ -138,7 +192,6 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 				continue
 		elif mode == "readMatrixZ":
 			pass
-		i += 1
 
 	# считывание из файла завершено заполнен список atoms
 	# ans = atoms2json(atoms)
