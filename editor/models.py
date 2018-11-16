@@ -33,6 +33,16 @@ class MolFile(models.Model):
 	text = models.TextField(default="")
 
 
+class MatrixZ(models.Model):
+	"""
+	Матрица Z для документа (мол. файла)
+	"""
+	owner = models.ForeignKey(MolFile, on_delete=models.CASCADE)  # документ, к которому относится матрица
+	coordinates = models.TextField(default="unknown")
+	units = models.TextField(default="unknown")
+	data = models.TextField(default="")  # serialised numpy array of data
+
+
 # Create your models here.
 class Atom(models.Model):
 	document = models.ForeignKey(Document, on_delete=models.CASCADE)
@@ -46,6 +56,7 @@ class Atom(models.Model):
 	molfile = models.ForeignKey(  # содержание .mol файла, из которого взять атом
 		MolFile, on_delete=models.CASCADE, null=True)
 	molfileindex = models.IntegerField(default=-1)  # индекс атома внутри исходного .mol файла
+	documentindex = models.IntegerField(default=0)  # индекс атома внутри документа (виден пользователю)
 
 
 # содержание кластера

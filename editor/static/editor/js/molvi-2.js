@@ -58,6 +58,7 @@ class Atom {
         //this.selected = false;  //выбран ли атом
         this.mass = 0;
         //this.id = getId();
+        this.documentindex = 0;
     }
 }
 
@@ -207,6 +208,7 @@ class MolviEngine {
                                 newAtom.id = la.id;
                                 newAtom.mass = la.mass;
                                 newAtom.radius = MolviConf.getAtomRadius(la.name);
+                                newAtom.documentindex = la.documentindex;
 
                                 newCluster.atomList.push(newAtom);
                             });
@@ -276,7 +278,7 @@ class MolviEngine {
         doc.clusters.forEach(function(cluster) {
             ahtml = "";
             cluster.atomList.forEach(function (atom) {
-                buf = Chunks.atom.replace(/\[\[id]]/g, atom.id);
+                buf = Chunks.atom.replace(/\[\[id]]/g, atom.documentindex);
                 buf = buf.replace(/\[\[name]]/g, atom.name);
                 buf = buf.replace(/\[\[x]]/g, atom.x);
                 buf = buf.replace(/\[\[y]]/g, atom.y);
@@ -379,7 +381,7 @@ class MolviEngine {
                 view.atomMaterials.push(material);
 
                 htmllabel.setParent(mesh);
-                htmllabel.setHTML(atom.name + atom.id);
+                htmllabel.setHTML(atom.name + atom.documentindex);
 //                console.log(atom);
                 view.labels.push(htmllabel);
 
@@ -809,9 +811,11 @@ class MolviEngine {
                 id = parseInt(item['id']),
                 mass = parseFloat(item['mass']),
                 name = item['name'],
+                documentindex = parseInt(item['documentindex']),
                 newAtom = new Atom(x, y, z, name);
                 newAtom.id = id;
                 newAtom.mass = mass;
+                newAtom.documentindex = documentindex;
             atomlist[id] = newAtom;
         });
 

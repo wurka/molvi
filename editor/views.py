@@ -5,7 +5,7 @@ from .views_utils import *
 from .mathutils import rotate_by_deg
 from .models import Document, Link, Atom, Cluster, ClusterAtom, DihedralAngle, DihedralAngleLink
 from .models import ValenceAngle, ValenceAngleLink
-from .models import MolFile
+from .models import MolFile, MatrixZ
 import os
 import json
 from .geom import Point, Line, Plane
@@ -58,7 +58,6 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 	ValenceAngle.objects.all().delete()
 	ValenceAngleLink.objects.all().delete()
 
-
 	matrix_z_coordinates = "unknown"
 	matrix_z_units = "unknown"
 	mz_espec = 2
@@ -69,10 +68,11 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 	mz_next_column = 0
 
 	matrix_z_lines = list()
-	matrix_z = None  # type: np.array
 	active_doc = None
+	atom_number = 1
 	try:
 		active_doc = Document.objects.get(is_active=True)
+		atom_number = len(Atom.objects.filter(document=active_doc))
 	except Document.DoesNotExist:
 		pass
 
@@ -140,7 +140,9 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 
 					if not mz_skipped:  # normal line
 						for ind in range(mz_espec-1):
-							matrix_z[mz_cline, mz_crow+ind] = float(splited[ind+1])
+							val = float(splited[ind+1])
+							matrix_z[mz_cline, mz_crow+ind] = val
+							matrix_z[mz_crow+ind, mz_cline] = val
 						mz_espec += 1
 						mz_cline += 1
 					else:  # line with skip
@@ -153,12 +155,21 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 						for ind in range(len(splited) - 1):
 							try:
 								val = float(splited[ind+1])
-								matrix_z[mz_cline, mz_crow + ind] = float(splited[ind + 1])
+								matrix_z[mz_cline, mz_crow + ind] = val
+								matrix_z[mz_crow + ind, mz_cline] = val
 							except ValueError:
 								mz_espec = 2
 								continue
 						mz_espec += 1
 						mz_cline += 1
+
+				# сохранение результатов чтения
+				MatrixZ.objects.create(
+					owner=molfile,
+					coordinates=matrix_z_coordinates,
+					units=matrix_z_units,
+					data=matrix_z.dumps()
+				)
 
 				mode = "scan"
 
@@ -191,6 +202,8 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 				new_atom = Atom(
 					x=ax, y=ay, z=az, name=name, mass=mass, document=active_doc, molfileindex=number)
 				new_atom.molfile = molfile
+				new_atom.documentindex = atom_number
+				atom_number += 1
 				new_atom.save()
 				atoms.append(new_atom)
 
@@ -647,7 +660,7 @@ def get_active_data(request):
 	} for slink in slinks]
 	bdatoms = Atom.objects.filter(document=sdoc)
 	atoms = [{
-		"id": a.id, "x": a.x, "y": a.y, "z": a.z, "name": a.name, "color": a.color, "radius": a.radius
+		"id": a.id, "documentindex": a.documentindex, "x": a.x, "y": a.y, "z": a.z, "name": a.name, "color": a.color, "radius": a.radius
 	} for a in bdatoms]
 
 	# двугранные углы
