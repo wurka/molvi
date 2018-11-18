@@ -15,6 +15,7 @@ from .geom import Quaternion, Point
 from pyquaternion import Quaternion as Quater
 from re import sub as resub
 import numpy as np
+import pickle
 
 
 class MolFileReadingException(Exception):
@@ -72,7 +73,7 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 	atom_number = 1
 	try:
 		active_doc = Document.objects.get(is_active=True)
-		atom_number = len(Atom.objects.filter(document=active_doc))
+		atom_number = len(Atom.objects.filter(document=active_doc)) + 1
 	except Document.DoesNotExist:
 		pass
 
@@ -726,26 +727,89 @@ def open_mol_file(request):
 	if "filename" not in request.GET:
 		return HttpResponse("there si no parameter: filename", status=500)
 
+	active_doc = Document.objects.get(is_active=True)
+
 	clear = False
 	if 'clear' in request.GET:
 		clear = json.loads(request.GET["clear"])
+	if clear:
+		Link.objects.filter(document=active_doc).delete()
+		Cluster.objects.filter(document=active_doc).delete()
+		Atom.objects.filter(document=active_doc).delete()
 
 	file_name = request.GET['filename']
 	mol_dir = os.path.abspath(os.path.join("editor", "files", "mols"))
 	file_name = os.path.join(mol_dir, file_name)
 	atom_list = mol_file_data(file_name)
 
-	active_doc = Document.objects.get(is_active=True)
-	if clear:
-		Link.objects.filter(document=active_doc).delete()
-		Cluster.objects.filter(document=active_doc).delete()
-		Atom.objects.filter(document=active_doc).delete()
 	mol_cluster = Cluster.objects.create(document=active_doc, caption="mol-file")
 	for atom in atom_list:
 		atom.save()
 		ClusterAtom.objects.create(cluster=mol_cluster, atom=atom)
 
 	return get_active_data(request)
+
+
+def save_mol_file(request):
+	if 'filename' not in request.POST:
+		return HttpResponse("There is no filename specified!", status=500)
+	file_name = json.loads(request.POST["filename"]) + ".mol"
+	mol_dir = os.path.abspath(os.path.join("editor", "files", "mols"))
+	file_name = os.path.join(mol_dir, file_name)
+
+	# подготовка текста
+	txt = ""
+	try:
+		active_doc = Document.objects.get(is_active=True)
+	except Document.DoesNotExist:
+		return HttpResponse("There is no active document!", status=500)
+	atoms = Atom.objects.filter(document=active_doc).order_by("documentindex")
+	molfiles = list()
+
+	txt += "[Atoms]\n"
+	txt += "Length=Angstroms\n"
+	txt += "Count={}\n".format(len(atoms))
+	txt += "//No\tx\ty\tz\tName\tMass\n"
+	for a in atoms:
+		txt += "{}\t{}\t{}\t{}\t{}\t{}\n".format(
+			a.documentindex, a.x, a.y, a.z, a.name, a.mass
+		)
+		if a.molfile not in molfiles:
+			molfiles.append(a.molfile)
+	txt += "\n"
+
+	txt += "[Matrix Z]\n"
+	txt += "Coordinates=Cartesian\n"
+	txt += "Units=Hartree\n"
+	matrixes = list()
+	for molfile in molfiles:
+		matrixes.append(MatrixZ.objects.get(owner=molfile))
+	if len(matrixes) == 1:  # один кластер
+		data = pickle.loads(matrixes[0].data)
+		size = len(data[0])
+		for i in range(size):
+			atom = atoms[i % 3]  # полагается, что атомы стоят в том же порядке, что и в матрице + 3 строки на атом
+			txt += atom.name + "\t" + "\t".join(["{:f}".format(v) for v in data[i][:i+1]]) + "\n"
+	elif len(matrixes) == 2:  # два кластера
+		data1 = pickle.loads(matrixes[0].data)
+		data2 = pickle.loads(matrixes[1].data)
+		size1 = len(data1)
+		size2 = len(data2)
+		axes = ("x", "y", "z")
+		for i in range(size1):
+			atom = atoms[i // 3]  # полагается, что атомы первой группы в списке стоят первыми
+			nm = "{}{}{}".format(atom.name, atom.documentindex, axes[i % 3])
+			txt += nm + "\t" + "\t".join(["{:f}".format(v) for v in data1[i][:i + 1]]) + "\n"
+		for i in range(size2):
+			atom = atoms[size1//3 + i // 3]  # полагается, что атомы второй группы в списке стоят последними
+			nm = "{}{}{}".format(atom.name, atom.documentindex, axes[i % 3])
+			txt += nm + "\t" + "0.000000\t"*size1 + "\t".join(["{:f}".format(v) for v in data2[i][:i + 1]]) + "\n"
+	else:
+		return HttpResponse("There is no algorithm to storing {} clusters".format(len(matrixes)), status=500)
+	txt += "\n"
+	with open(file_name, "wt") as file:
+		file.write(txt)
+	return HttpResponse("OK")
 
 
 def save_links(request):

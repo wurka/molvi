@@ -27,10 +27,17 @@
     </div>
     <div class="layout">
         <div id="saveFileDialog">
+            <div class="save-mode">
+                <div class="line">
+                    <span>Сохранить как:</span>
+                    <div class="selection selected" id="save-mol-file">.mol</div>
+                    <div class="selection" id="save-document">doc</div>
+                </div>
+            </div>
             <div class="title noselect">Введите имя файла для сохранения </div>
             <input type="text" id="saveFileName" value="new_document">
             <div class="buttons noselect">
-                <div class="mybutton" onclick="view.enableControls(); engine.saveDocumentToServer(); $('#saveFileDialog').hide();">OK</div>
+                <div class="mybutton" onclick="view.enableControls(); engine.saveAction(); $('#saveFileDialog').hide();">OK</div>
                 <div class="mybutton" onclick="$('#saveFileDialog').hide(); view.enableControls()">Отмена</div>
             </div>
         </div>

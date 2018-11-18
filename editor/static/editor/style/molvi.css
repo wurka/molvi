@@ -191,6 +191,13 @@
     text-align: right; }
     #saveFileDialog .buttons .mybutton:last-child {
       margin: 0 20px 0 10px; }
+  #saveFileDialog .save-mode .line .selection {
+    display: inline-block;
+    border: 1px solid gray;
+    padding: 0 3px;
+    cursor: default; }
+  #saveFileDialog .save-mode .line .selected {
+    background: lightgray; }
 
 #moleculaMoveControls {
   border: 1px solid skyblue;
