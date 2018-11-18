@@ -792,8 +792,9 @@ class MolviEngine {
      * @param deleteOld true => удалить все старые атомы
      */
     buildAtomData(jsonString, deleteOld){
-         //создание рабочего документа (хранит всю рабочую инфу)
-
+        //создание рабочего документа (хранит всю рабочую инфу)
+        // decide how to do with old data
+        deleteOld = true;
         if (deleteOld) {
             doc = new MolviDocument();
         }
@@ -1136,6 +1137,29 @@ class MolviEngine {
         engine.unselectAtoms();
     }
 
+    saveAction(){
+        // выбрано сохранение как .mol
+        if ($("#save-mol-file").hasClass("selected")) {
+          this.saveMolFileToServer();
+        } else if ($("#save-document").hasClass("selected")) {
+            // выбрано сохранение документа во внутреннем формате
+            this.saveDocumentToServer();
+        }
+    }
+
+    saveMolFileToServer() {
+        $.ajax({
+            url: "/molvi/save-mol-file",
+            method: "POST",
+            data: {
+                "filename": JSON.stringify($("#saveFileName").val()),
+                "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val()
+            },
+            error: function (data) {
+                alert(data.responseText);
+            }
+        })
+    }
     saveDocumentToServer() {
         var mydoc = {
             "documentName": $("#saveFileName").val(),
