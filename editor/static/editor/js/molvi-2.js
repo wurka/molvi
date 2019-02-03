@@ -1,7 +1,87 @@
 "use strict";
 //import getCookie from "mycookie";
 //import * as THREE from "./three";
+function count(obj) {
+    if (obj.__count__ !== undefined) { // Old FF
+        return obj.__count__;
+    }
 
+    if (Object.keys) { // ES5
+        return Object.keys(obj).length;
+    }
+
+    // Everything else:
+    let c = 0, p;
+    for (p in obj) {
+        if (obj.hasOwnProperty(p)) {
+            c += 1;
+        }
+    }
+    return c;
+}
+
+let app = new Vue({
+    el: '#app',
+    delimiters: ["[[", "]]"],
+    data: {
+        atoms: {
+            10: {
+                name: "no name",
+                x: 0,
+                y: 0,
+                z: 0,
+                color: "#DEADDD"
+            },
+            11: {
+                name: "no name",
+                x: 0,
+                y: 0,
+                z: 0,
+                color: "#DEADDD"
+            }
+        },
+        links: [],
+        clusters: [{
+            caption: "Kitty Cluster",
+            atoms: [10, 11]
+        }],
+        valenceAngles: [
+            {
+                id: '0',
+                name: "my title",
+                value: "776",
+                atom1: 101,
+                atom2: 102,
+                atom3: 103,
+                link1: 201,
+                link2: 202
+            }
+        ],
+        documentName: "new document",
+        selectedAtomIds: [],
+        selectedLinkIds: []
+    },
+    computed: {
+        noValenceAngles: function () {
+            return this.length === 0;
+        }
+    },
+    methods: {
+        selectAtomsById(atomList) {
+            this.selectedAtomIds = atomList;
+            console.log("now selected:")
+            console.log(atomList);
+        }
+    },
+    watch: {
+        atoms: function(newAtoms) {
+            engine.build3DFromDoc();
+        },
+        selectedAtomIds: function(val) {
+            engine.selectAtomsById(val);
+        }
+    },
+});
 
 function loading_display(ison) {
     if (ison) {
@@ -194,6 +274,8 @@ class MolviEngine {
                     $("#openFileDialog .fileView").html("обработка ответа");
                     try {
                         var loaded_doc = JSON.parse(data);
+                        console.log(loaded_doc)
+                        console.log(loaded_doc.atoms);
 
                         // создание нового документа
                         doc = new MolviDocument();
@@ -253,7 +335,6 @@ class MolviEngine {
                 },
                 success(data) {
                     // получен json файл с информацией о молекуле
-                    console.log(data);
                     try {
                         engine.buildAtomData(data, deleteold);
                         view.closeOpenFileDialog();
@@ -305,7 +386,7 @@ class MolviEngine {
             linkshtml += newHtml;
         });
 
-        let valenceangleshtml = "";
+        /*let valenceangleshtml = "";
 
         chunk = Chunks.valenceAngle;
 
@@ -320,11 +401,11 @@ class MolviEngine {
             newHtml = newHtml.replace(/\[value]/g, angle.value);
             valenceangleshtml += newHtml;
         });
-
+        $(".valenceAnglesView").html(valenceangleshtml);*/
 
         $(".atomsView").html(html);
         $(".linksView").html(linkshtml);
-        $(".valenceAnglesView").html(valenceangleshtml);
+
     }
 
     selectionMaterial(){
@@ -365,9 +446,11 @@ class MolviEngine {
             disp.children[1].remove();
         }
 
-        doc.clusters.forEach(function (cluster) {
-            cluster.atomList.forEach(function (atom) {
-                let radius = MolviConf.getAtomRadius(atom.name),
+        for (let key in app.clusters) {
+            let cluster = app.clusters[key];
+            cluster.atoms.forEach(function (atom_id) {
+                let atom = app.atoms[atom_id],
+                    radius = MolviConf.getAtomRadius(atom.name),
                     sd = settings.sphereDetalisation,
                     geometry = new THREE.SphereGeometry(radius, sd, sd),
                     material = engine.buildAtomMaterial(atom.name),
@@ -388,7 +471,7 @@ class MolviEngine {
                 disp.appendChild(htmllabel.element);
 
             });
-        });
+        };
 
         /////////////////////// LINKS ///////////////////////////////
         //удаление старых Mesh'эй
@@ -619,10 +702,25 @@ class MolviEngine {
 
             let newLink = new Link(this.linkCreationSource[0], this.linkCreationSource[1], "new linkk", 0);
             doc.links.push(newLink);
+            $.ajax({
+                url: '/molvi/create-link',
+                method: 'POST',
+                data: {
+                    "atom1": this.linkCreationSource[0],
+                    "atom2": this.linkCreationSource[1],
+                    "csrfmiddlewaretoken": $('input[name=csrfmiddlewaretoken]').val()
+                },
+                success: function() {
+                    engine.LoadAtomDataFromServer(true);
+                },
+                error: function (data) {
+                    console.error("error while link creation: " + data.responseText);
+                }
+            });
 
             engine.controlMode ='none';
-            engine.buildHtmlFromDoc();
-            engine.build3DFromDoc();
+//            engine.buildHtmlFromDoc();
+//            engine.build3DFromDoc();
         }
 
         
@@ -797,8 +895,24 @@ class MolviEngine {
         deleteOld = true;
         if (deleteOld) {
             doc = new MolviDocument();
+
+            app.clusters = {}
+            app.atoms = {}
         }
-        let docData = JSON.parse(jsonString);
+        let docData = JSON.parse(jsonString),
+            clusterN = count(app.clusters),
+            newCluster = {
+                caption: "Кластер " + clusterN,
+                atoms: []
+            };
+
+        app.atoms = docData.atoms;
+        for (let atom_id in app.atoms) {
+            newCluster.atoms.push(atom_id);
+        }
+        app.clusters[0] = newCluster;
+        return;
+
         doc.documentName = docData["name"];
 
         let atar = JSON.parse(jsonString);
@@ -850,8 +964,9 @@ class MolviEngine {
                 newVA = new ValenceAngle(id, name, value, a1, a2, a3, link1, link2);
 
             doc.valenceAngles.push(newVA);
-        });
 
+        });
+        app.valenceAngles = docData["valence_angles"];
 
         engine.buildHtmlFromDoc();
         engine.build3DFromDoc();

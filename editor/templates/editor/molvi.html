@@ -15,7 +15,7 @@
     <script src="{% static 'editor/js/molviChunks.js' %}"></script>
     <script src="{% static 'editor/js/molviConf.js' %}"></script>
     <script src="{% static 'editor/js/mycookie.js' %}"></script>
-    <script src="{% static 'editor/js/molvi-2.js' %}"></script>
+
 </head>
 <body>
     {% csrf_token %}
@@ -25,7 +25,7 @@
         </div>
         <div class="text">Working</div>
     </div>
-    <div class="layout">
+    <div class="layout" id="app">
         <div id="saveFileDialog">
             <div class="save-mode">
                 <div class="line">
@@ -83,7 +83,24 @@
                                 <img src="{% static 'editor/images/valence-angle-32.png' %}" alt="valence-angles.png">
                             </div>
                         </div>
-                        <div class="atomsView viewPanel" id="panelAtoms">loading...</div>
+                        <div class="atomsView viewPanel" id="panelAtoms">
+                            <div v-for="cluster in clusters" class="clusterView">
+                                <div class="title">
+                                    <span>[[cluster.caption]] </span><div style="text-decoration: underline" class='move' onclick='engine.openMoveControls([[id]])'>переместить</div>
+                                </div>
+                                <div class="moleculaData">
+                                    <div v-for="atom_id in cluster.atoms" class="atomView" onclick="engine.selectAtomById([[id]])" id="atomView_[[id]]">
+                                        <div class="name t1-5">[[atoms[atom_id].name]]</div>
+                                        <div class="id t1-5">[[atoms[atom_id].documentindex]]</div>
+                                        <div class="devider"></div>
+                                        <div class="x" contenteditable>x: x</div>
+                                        <div class="y" contenteditable>y: y</div>
+                                        <div class="z" contenteditable>z: z</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
                         <div class="linksHolder viewPanel" id="panelLinks">
                             <div class="linksView"></div>
                         </div>
@@ -105,7 +122,25 @@
                             <div class="buttons">
                                 <div class="flat-button" title="Построить автоматически список валентных угло" onclick="buildValenceAngles()">Построить</div>
                             </div>
-                            <div class  ="valenceAnglesView">loading</div>
+                            <div class  ="valenceAnglesView">
+                                <div v-if="noValenceAngles">нет валентных углов</div>
+                                <div v-else>
+                                    <div v-for="va in valenceAngles" class="valence-angle"
+                                         v-on:click="
+                                            selectedAtomIds = [va.atom1.id, va.atom2.id, va.atom3.id];
+                                            selectedLinkIds = ['va.link1.id', 'va.link2.id']"
+                                         v-on:mouseover="
+                                            selectedAtomIds = [va.atom1.id, va.atom2.id, va.atom3.id];
+                                            selectedLinkIds = ['va.link1.id', 'va.link2.id']">
+                                        <div class="title">[[va.name]]</div>
+                                        <div class="buttons">
+                                            <div class="button deleteva" click="deleteValenceAngle([id])" title="Удалить"><img src="/static/editor/images/cross-20.png" alt="cross.png"></div>
+                                            <div class="button editva" onclick="editValenceAngle([id], [value])" title="Изменить угол"><img src="/static/editor/images/pen.svg" alt="pen"></div>
+                                        </div>
+                                        <div class="value">[[va.value]]</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="linkRotation viewPanel" id="linkRotationPanel">
@@ -257,5 +292,7 @@
         </div>
     </div>
     <div id="errorMessage"></div>
+    <script src="{% static 'editor/js/vue.js' %}"></script>
+    <script src="{% static 'editor/js/molvi-2.js' %}"></script>
 </body>
 </html>

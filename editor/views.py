@@ -594,9 +594,9 @@ def valence_angles_autotrace(request):
 				new_va = ValenceAngle.objects.create(
 					document=document,
 					name="{}{}-{}{}-{}{}".format(
-						atom1.name, atom1.id,
-						atom2.name, atom2.id,
-						atom3.name, atom3.id
+						atom1.name, atom1.documentindex,
+						atom2.name, atom2.documentindex,
+						atom3.name, atom3.documentindex
 					),
 					value=value
 				)
@@ -831,6 +831,28 @@ def save_links(request):
 		atom2 = Atom.objects.get(id=link["to"], document=active_doc)
 		Link.objects.create(document=active_doc, atom1=atom1, atom2=atom2)
 
+	return HttpResponse("OK")
+
+
+def create_link(request):
+	must_be = ["atom1", "atom2"]
+
+	for must in must_be:
+		if must not in request.POST:
+			return HttpResponse("there is no parameter: {}".format(must), status=500)
+
+	adoc = Document.objects.get(is_active=True)
+	try:
+		atom1 = Atom.objects.get(document=adoc, documentindex=int(request.POST["atom1"]))
+		atom2 = Atom.objects.get(document=adoc, documentindex=int(request.POST["atom2"]))
+	except ValueError:
+		return HttpResponse("atom1 and atom2 must be valid integer numbers", status=500)
+	except Atom.MultipleObjectsReturned:
+		return HttpResponse("MultipleObjects for atom1 or atom2", status=500)
+	except Atom.DoesNotExist:
+		return HttpResponse("There is no such atom in cluster and document", status=500)
+
+	Link.objects.create(document=adoc, atom1=atom1, atom2=atom2)
 	return HttpResponse("OK")
 
 

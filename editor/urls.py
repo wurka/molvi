@@ -31,6 +31,7 @@ urlpatterns = [
 	path('open-mol-file', views.open_mol_file),  # открыть mol file и поместить информацию из него в активный документ
 	path('save-mol-file', views.save_mol_file),  # сохранить mol file из активного документа
 	path('save-links', views.save_links),  # сохранить на сервере связи (для активного документа)
+	path('create-link', views.create_link),  # создать новую связь
 	path('edit-cluster-move', views.edit_cluster_move),  # переместить кластер
 	path('edit-link-set-length', views.edit_link_set_length),  # изменить длину связи
 	path('rotate-cluster-around-link', views.rotate_cluster_around_link),  # повернуть кластер вокруг связи
