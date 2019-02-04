@@ -84,9 +84,9 @@
                             </div>
                         </div>
                         <div class="atomsView viewPanel" id="panelAtoms">
-                            <div v-for="cluster in clusters" class="clusterView">
+                            <div v-for="(cluster, id) in clusters" class="clusterView">
                                 <div class="title">
-                                    <span>[[cluster.caption]] </span><div style="text-decoration: underline" class='move' onclick='engine.openMoveControls([[id]])'>переместить</div>
+                                    <span>[[cluster.caption]] </span><div style="text-decoration: underline" class='move' @click='openMoveControls([[id]])'>переместить</div>
                                 </div>
                                 <div class="moleculaData">
                                     <div v-for="atom_id in cluster.atoms" class="atomView" onclick="engine.selectAtomById([[id]])" id="atomView_[[id]]">
@@ -102,7 +102,21 @@
 
                         </div>
                         <div class="linksHolder viewPanel" id="panelLinks">
-                            <div class="linksView"></div>
+                            <div class="linksView">
+                                <div v-for="(link, id) in links" class="link t1-5" id="link_0" onmouseover="engine.selectLinkById([[id]])" onmouseout="engine.unselectLinks()">
+                                    <div class="line">
+                                        <div class='text t1-5'>
+                                            <span class="name">[[link.name]]</span>
+                                        </div>
+                                        <div class="change-length text t1-5" onclick="openChangeLinkLengthPanel([[id]], [[link.value]])"><img src="/static/editor/images/change-length.svg" alt="cl.png"></div>
+                                        <div class="change-lengthcell text t1-5" onclick="openLinkRotationPanel([[id]], [[link.from]], [[link.to]])"><img src="/static/editor/images/spin.svg" alt="lr.png"></div>
+                                        <div class="deleteLink text t1-5" title="delete link" onclick="engine.deleteLink([[id]])"><img src="/static/editor/images/cross-20.png" alt="cross.png"></div>
+                                    </div>
+                                    <div class="line">
+                                        <div class="current-value t1-5">[[link.value]]</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="dihedralAngles viewPanel" id="panelDihedralAngles">
                             <div class="flat-button new-dihedral-angle-button" onclick="dihedralAngleCreator.start()">Создать</div>

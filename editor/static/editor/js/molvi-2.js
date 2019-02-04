@@ -40,7 +40,12 @@ let app = new Vue({
                 color: "#DEADDD"
             }
         },
-        links: [],
+        links: [{
+            20: {
+                atom1: 10,
+                atom2: 11
+            }
+        }],
         clusters: [{
             caption: "Kitty Cluster",
             atoms: [10, 11]
@@ -71,6 +76,21 @@ let app = new Vue({
             this.selectedAtomIds = atomList;
             console.log("now selected:")
             console.log(atomList);
+        },
+        openMoveControls(clusterId){
+            console.log("open move for: " + clusterId);
+            "use strict";
+
+            $("#moveMoleculaId").html(clusterId);
+            $('#moleculaMoveControls').show();
+
+            $("#moveControl_x").val(0);
+            $("#moveControl_y").val(0);
+            $("#moveControl_z").val(0);
+
+            // view.controls.enabled = false
+            closeControls();
+            $(".control-cluster-position").fadeIn(200);
         }
     },
     watch: {
@@ -351,7 +371,8 @@ class MolviEngine {
     /**
      * Построить Html объекты из "документа"
      */
-    buildHtmlFromDoc() {        
+    buildHtmlFromDoc() {
+        return;
         var ahtml = "",
             mhtml,
             buf,
@@ -471,7 +492,7 @@ class MolviEngine {
                 disp.appendChild(htmllabel.element);
 
             });
-        };
+        }
 
         /////////////////////// LINKS ///////////////////////////////
         //удаление старых Mesh'эй
@@ -480,20 +501,30 @@ class MolviEngine {
             view.linkGroup.children.splice(0, 1);
         }
         //создание Mesh'ей
-        doc.links.forEach(function (link) {
-            var atom1 = null,
+        for (let link_id in app.links) {
+            let link = app.links[link_id],
+                atom1 = null,
                 atom2 = null;
 
-            doc.clusters.forEach(function (cluster) {
-                cluster.atomList.forEach(function (atom) {
-                    if (atom.id === link.from) {
+            /*for (let cluster_id in app.clusters) {
+                let cluster = app.clusters[cluster_id];
+                for (let atom_indx in cluster.atoms) {
+                    let atom_id = cluster.atoms[atom_indx],
+                        atom = app.atoms[atom_id];
+                    if (atom_id === link.atom1) {
                         atom1 = atom;
                     }
-                    if (atom.id === link.to) {
+                    if (atom.id === link.atom2) {
                         atom2 = atom;
                     }
-                });
-            });
+                }
+            }*/
+            if (app.atoms.hasOwnProperty(link.atom1)) {
+                atom1 = app.atoms[link.atom1];
+            }
+            if (app.atoms.hasOwnProperty(link.atom2)) {
+                atom2 = app.atoms[link.atom2];
+            }
 
             if (atom1 == null) {
                 console.error("atom 1 not finded!");
@@ -504,15 +535,15 @@ class MolviEngine {
                 return;
             }
 
-            var lineColor = 0xf6ff0f;
+            let lineColor = 0xf6ff0f;
             if (doc.selectedLinkIds.includes(link.id)) {
                 lineColor = 0xff0000;
             }
 
-            var lineMesh = view.buildLineMesh(atom1.x, atom1.y, atom1.z, atom2.x, atom2.y, atom2.z, lineColor);
+            let lineMesh = view.buildLineMesh(atom1.x, atom1.y, atom1.z, atom2.x, atom2.y, atom2.z, lineColor);
             view.linkGroup.add(lineMesh);
 
-        });
+        }
 
         ////////////////////// SELECTED ///////////////////////
         while (view.outlinesGroup.children.length > 0) {
@@ -896,8 +927,8 @@ class MolviEngine {
         if (deleteOld) {
             doc = new MolviDocument();
 
-            app.clusters = {}
-            app.atoms = {}
+            app.clusters = {};
+            app.atoms = {};
         }
         let docData = JSON.parse(jsonString),
             clusterN = count(app.clusters),
@@ -906,11 +937,13 @@ class MolviEngine {
                 atoms: []
             };
 
+        // список атомов храняться на уровне документа
         app.atoms = docData.atoms;
-        for (let atom_id in app.atoms) {
-            newCluster.atoms.push(atom_id);
-        }
-        app.clusters[0] = newCluster;
+        app.clusters = docData.clusters;
+        // список связей
+        app.links = docData.links;
+        console.log(docData);
+
         return;
 
         doc.documentName = docData["name"];
@@ -1045,38 +1078,37 @@ class MolviEngine {
         xshift = parseFloat(xshift);
         yshift = parseFloat(yshift);
         zshift = parseFloat(zshift);
-        id = parseInt(id, 10);
+        id = parseInt(id);
 
         if (isNaN(xshift) || isNaN(yshift) || isNaN(zshift)){
             console.log("Parse error!");
             $("#moleculaMoveControls").hide();
             return;
         }
-        console.log('doMoleculaMove, id: ');
-        console.log(id);
+        console.log('doMoleculaMove, id: ' + id);
         let cluster = null;
-        doc.clusters.forEach(function (clust) {
-            if (clust.id === id) {
-                cluster = clust;
-                return 0;
-            }
-        });
+        if (app.clusters.hasOwnProperty(id)) {
+            cluster = app.clusters[id];
+        }
         if (cluster === null) {
             console.error("No cluster found. with id: " + id.toString());
             return;
         } else {
-            cluster.atomList.forEach(function (atom) {
+            for (let atom_indx in cluster.atoms) {
+                let atom_id = cluster.atoms[atom_indx],
+                    atom = app.atoms[atom_id];
+
                 atom.x += xshift;
                 atom.y += yshift;
                 atom.z += zshift;
-            });
+            }
         }
         engine.closeMoveControls();
 
         $.ajax({
             url: "/molvi/edit-cluster-move",
             data: {
-                "cluster": cluster.id,
+                "cluster": id,
                 "x": xshift,
                 "y": yshift,
                 "z": zshift
@@ -1096,9 +1128,9 @@ class MolviEngine {
     }
 
     executeAutoTrace() {
-        var radius = 1.6,
+        let radius = 1.6,
             re = document.getElementById('traceRange').value;
-        radius = parseFloat(re, 10);
+        radius = parseFloat(re);
         if (isNaN(radius)) {
             console.log("Error in parse int");
             alert('Введите корректное значение длины автотрассировки');
@@ -1106,44 +1138,52 @@ class MolviEngine {
         }
 
         //удаление старых связей
-        while(doc.links.length > 0) {
+        /*while(doc.links.length > 0) {
             doc.links[0] = null;
             doc.links.splice(0, 1);
+        }*/
+        let newLinks = [];
+
+        //let rmin,
+          //  numberj;
+        for (let cluster1_id in app.clusters) {
+            let cluster1 = app.clusters[cluster1_id];
+            for (let cluster2_id in app.clusters) {
+                let cluster2 = app.clusters[cluster2_id];
+                for (let indx1 in cluster1.atoms) {
+                    let atom1_id = cluster1.atoms[indx1],
+                        atom1 = app.atoms[atom1_id];
+                    for (let indx2 in cluster2.atoms) {
+                        let atom2_id = cluster2.atoms[indx2],
+                            atom2 = app.atoms[atom2_id];
+                           if (atom1_id === atom2_id) {
+                           } else {
+                               let r1 = Math.pow(atom1.x - atom2.x, 2),
+                                   r2 = Math.pow(atom1.y - atom2.y, 2),
+                                   r3 = Math.pow(atom1.z - atom2.z, 2),
+                                   r = Math.sqrt(r1 + r2 + r3);
+
+                               if(r <= radius) {
+                                   let newlink = {
+                                       from: atom1_id,
+                                       to: atom2_id
+                                   };
+                                   newLinks.push(newlink);
+                               }
+                           }
+                   }
+               }
+           }
         }
 
-        let rmin,
-            numberj;
-
-        doc.clusters.forEach(function (cluster1) {
-           doc.clusters.forEach(function (cluster2) {
-               cluster1.atomList.forEach(function (atom1) {
-                   cluster2.atomList.forEach(function (atom2) {
-                       if (atom1.id === atom2.id) {
-
-                       } else {
-                           let r1 = Math.pow(atom1.x - atom2.x, 2),
-                               r2 = Math.pow(atom1.y - atom2.y, 2),
-                               r3 = Math.pow(atom1.z - atom2.z, 2),
-                               r = Math.sqrt(r1 + r2 + r3);
-
-                           if(r <= radius) {
-                               let newlink = new Link(atom1.id, atom2.id);
-                               doc.links.push(newlink);
-                           }
-                       }
-                   })
-               });
-           }) ;
-        });
-
         //ревизия созданных связей
-        doc.links.forEach(function(link1) {
-            doc.links.forEach(function(link2, ind) {
-                if ((link1.from == link2.from) && (link1.to == link2.to)) //это одна и та же связь
+        newLinks.forEach(function(link1) {
+            newLinks.forEach(function(link2, ind) {
+                if ((link1.from === link2.from) && (link1.to === link2.to)) //это одна и та же связь
                     return;
 
-                if ((link2.to == link1.from) && (link2.from == link1.to)) { // связи разные, но одинаковые
-                    doc.links.splice(ind, 1);
+                if ((link2.to === link1.from) && (link2.from === link1.to)) { // связи разные, но одинаковые
+                    newLinks.splice(ind, 1);
                 }
             });
         });
@@ -1153,7 +1193,7 @@ class MolviEngine {
             method: "GET",
             data: {
                 "clear": true,
-                "links": JSON.stringify(doc.links)
+                "links": JSON.stringify(newLinks)
             },
             success: function (data) {
                 console.log(data);
@@ -1165,8 +1205,8 @@ class MolviEngine {
             }
         });
 
-        engine.buildHtmlFromDoc();
-        engine.build3DFromDoc();
+        //engine.buildHtmlFromDoc();
+        //engine.build3DFromDoc();
     }
 
     rotateCluster(centerAtomId = null, dx = null, dy = null, dz = null) {

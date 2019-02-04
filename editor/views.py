@@ -9,7 +9,7 @@ from .models import MolFile, MatrixZ
 import os
 import json
 from .geom import Point, Line, Plane
-from math import sqrt, pi, acos
+from math import sqrt, pi, acos, degrees
 from django.db.transaction import atomic
 from .geom import Quaternion, Point
 from pyquaternion import Quaternion as Quater
@@ -641,28 +641,34 @@ def get_active_data(request):
 	except Document.DoesNotExist:
 		sdoc = Document.objects.create(creator="noname", name="new document", is_active=True)
 
-	clusters = list()
+	clusters = dict()
 	sclusters = Cluster.objects.filter(document=sdoc)
 	for cluster in sclusters:
 		ca = ClusterAtom.objects.filter(cluster=cluster)
 
-		new_cluster = {
-			"id": cluster.id,
+		# new_cluster = {
+		# 	"id": cluster.id,
+		# 	"caption": cluster.caption,
+		# 	"atoms": [atom.atom.id for atom in ca]
+		# }
+		clusters[cluster.id] = {
 			"caption": cluster.caption,
 			"atoms": [atom.atom.id for atom in ca]
 		}
-		clusters.append(new_cluster)
 
 	slinks = Link.objects.filter(document=sdoc)
-	links = [{
-		"id": slink.id, "atom1": slink.atom1.id, "atom2": slink.atom2.id,
-		"name": "{}{}-{}{}".format(slink.atom1.name, slink.atom1.id, slink.atom2.name, slink.atom2.id),
-		"value": round(slink.get_length(), 3)
-	} for slink in slinks]
+	links = {
+		slink.id: {
+			"atom1": slink.atom1.id,
+			"atom2": slink.atom2.id,
+			"name": "{}{}-{}{}".format(slink.atom1.name, slink.atom1.id, slink.atom2.name, slink.atom2.id),
+			"value": round(slink.get_length(), 3)
+		} for slink in slinks}
 	bdatoms = Atom.objects.filter(document=sdoc)
-	atoms = [{
-		"id": a.id, "documentindex": a.documentindex, "x": a.x, "y": a.y, "z": a.z, "name": a.name, "color": a.color, "radius": a.radius
-	} for a in bdatoms]
+	atoms = {
+		a.id: {
+			"documentindex": a.documentindex, "x": a.x, "y": a.y, "z": a.z, "name": a.name, "color": a.color, "radius": a.radius
+		} for a in bdatoms}
 
 	# двугранные углы
 	dihedral_angles = list()
@@ -765,6 +771,8 @@ def save_mol_file(request):
 		return HttpResponse("There is no active document!", status=500)
 	atoms = Atom.objects.filter(document=active_doc).order_by("documentindex")
 	molfiles = list()
+
+	txt += "[Coordinates]\nType=Cartesian\n\n"
 
 	txt += "[Atoms]\n"
 	txt += "Length=Angstroms\n"
