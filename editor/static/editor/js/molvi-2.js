@@ -77,6 +77,20 @@ let app = new Vue({
             console.log("now selected:")
             console.log(atomList);
         },
+        unselectLinks() {
+            this.selectedLinkIds = [];
+        },
+        selectLinkById(id) {
+            console.log("selectLinkById("+id+")");
+            this.selectedLinkIds = [id];
+
+            engine.build3DFromDoc();
+            //engine.buildHtmlFromDoc();
+        },
+
+        closeControls() {
+            $(".controls").hide();
+        },
         openMoveControls(clusterId){
             console.log("open move for: " + clusterId);
             "use strict";
@@ -91,6 +105,24 @@ let app = new Vue({
             // view.controls.enabled = false
             closeControls();
             $(".control-cluster-position").fadeIn(200);
+        },
+        openChangeLinkLengthPanel(linkid, oldLength) {
+            console.log("openChangeLinkLengthPanel("+linkid+", "+oldLength+")");
+            closeControls();
+            $(".control-link-length").fadeIn(200);
+
+            $("#linkLengthOld").html(oldLength);
+            $("input[name=linkLengthNew]").val(oldLength);
+            $("input[name=linkChangeLengthId]").val(linkid);
+            view.disableControls();
+        },
+        editValenceAngle(id, currentValue) {
+            console.log("editValenceAngle("+id+", "+currentValue+")");
+            $(".controls").hide();
+            $(".control-valence-angle").fadeIn(300);
+
+            $(".control-valence-angle .input-id").val(id);
+            $(".control-valence-angle .current-value").html(currentValue);
         }
     },
     watch: {
@@ -536,7 +568,7 @@ class MolviEngine {
             }
 
             let lineColor = 0xf6ff0f;
-            if (doc.selectedLinkIds.includes(link.id)) {
+            if (app.selectedLinkIds.includes(link_id)) {
                 lineColor = 0xff0000;
             }
 
@@ -551,23 +583,9 @@ class MolviEngine {
             view.outlinesGroup.children.splice(0, 1);
         }
 
-        doc.selectedAtomIds.forEach(function (id) {
-            var satom = null;
-
-            doc.clusters.forEach(function (cluster) {
-                cluster.atomList.forEach(function (atom) {
-                    if (atom.id == id) {
-                        satom = atom;
-                    }
-                });
-            });
-
-            if (satom == null) {
-                console.error("id not found in doc atom list");
-                return;
-            }
-
-            var outlineMaterial = new THREE.MeshBasicMaterial({color: 0x8A00BD, side: THREE.BackSide}),
+        app.selectedAtomIds.forEach(function (id) {
+            let satom = app.atoms[id],
+                outlineMaterial = new THREE.MeshBasicMaterial({color: 0x8A00BD, side: THREE.BackSide}),
                 r = MolviConf.getAtomRadius(satom.name) * 1.2,
                 sd = settings.sphereDetalisation,
                 outlineGeometry = new THREE.SphereGeometry(r, sd, sd),
@@ -795,7 +813,7 @@ class MolviEngine {
                 // $(".atomsView").html(data); !!!!!
 //              console.log("LoadAtoms: data loading OK")
                 engine.buildAtomData(data, deleteold);
-//              console.log(data);
+//                console.log(data);
             },
             error: function(data) {
                 $(".atomsView").html(data.responseText);
@@ -851,6 +869,7 @@ class MolviEngine {
     }
 
     selectLinkById(id) {
+        console.log("selectLinkById("+id+")");
         doc.selectedLinkIds = [];
         doc.selectedLinkIds.push(id);
 
@@ -942,6 +961,7 @@ class MolviEngine {
         app.clusters = docData.clusters;
         // список связей
         app.links = docData.links;
+        app.valenceAngles = docData["valence_angles"];
         console.log(docData);
 
         return;
@@ -1809,7 +1829,10 @@ let engine = new MolviEngine(),
 
 function doEditValenceAngle() {
     let id = $(".control-valence-angle .input-id").val(),
-        angle = $(".control-valence-angle .input-angle").val(),
+        cur_angle =  $(".control-valence-angle .current-value").html(),
+        inp_angle = $(".control-valence-angle .input-angle").val(),
+        delta_deg = parseFloat(inp_angle) - parseFloat(cur_angle),
+        delta_rad = delta_deg / 180.0 * Math.PI,
         csrf_token = $("input[name=csrfmiddlewaretoken]").val();
 
     $.ajax({
@@ -1817,7 +1840,7 @@ function doEditValenceAngle() {
         method: "POST",
         data: {
             id: parseFloat(id),
-            angle: parseFloat(angle),
+            angle: delta_rad,
             csrfmiddlewaretoken: csrf_token
         },
         success: function (data) {

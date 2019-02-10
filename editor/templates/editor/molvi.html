@@ -103,12 +103,12 @@
                         </div>
                         <div class="linksHolder viewPanel" id="panelLinks">
                             <div class="linksView">
-                                <div v-for="(link, id) in links" class="link t1-5" id="link_0" onmouseover="engine.selectLinkById([[id]])" onmouseout="engine.unselectLinks()">
+                                <div v-for="(link, id) in links" class="link t1-5" id="link_0" @mouseover="selectLinkById(id)" @mouseout="unselectLinks()">
                                     <div class="line">
                                         <div class='text t1-5'>
                                             <span class="name">[[link.name]]</span>
                                         </div>
-                                        <div class="change-length text t1-5" onclick="openChangeLinkLengthPanel([[id]], [[link.value]])"><img src="/static/editor/images/change-length.svg" alt="cl.png"></div>
+                                        <div class="change-length text t1-5" @click="openChangeLinkLengthPanel(id, link.value)"><img src="/static/editor/images/change-length.svg" alt="cl.png"></div>
                                         <div class="change-lengthcell text t1-5" onclick="openLinkRotationPanel([[id]], [[link.from]], [[link.to]])"><img src="/static/editor/images/spin.svg" alt="lr.png"></div>
                                         <div class="deleteLink text t1-5" title="delete link" onclick="engine.deleteLink([[id]])"><img src="/static/editor/images/cross-20.png" alt="cross.png"></div>
                                     </div>
@@ -136,20 +136,17 @@
                             <div class="buttons">
                                 <div class="flat-button" title="Построить автоматически список валентных угло" onclick="buildValenceAngles()">Построить</div>
                             </div>
-                            <div class  ="valenceAnglesView">
+                            <div class="valenceAnglesView">
                                 <div v-if="noValenceAngles">нет валентных углов</div>
                                 <div v-else>
-                                    <div v-for="va in valenceAngles" class="valence-angle"
-                                         v-on:click="
-                                            selectedAtomIds = [va.atom1.id, va.atom2.id, va.atom3.id];
-                                            selectedLinkIds = ['va.link1.id', 'va.link2.id']"
+                                    <div v-for="(va, va_id) in valenceAngles" class="valence-angle"
                                          v-on:mouseover="
-                                            selectedAtomIds = [va.atom1.id, va.atom2.id, va.atom3.id];
-                                            selectedLinkIds = ['va.link1.id', 'va.link2.id']">
+                                            selectedAtomIds = [va.atom1, va.atom2, va.atom3];
+                                            selectedLinkIds = [String(va.link1), String(va.link2)]">
                                         <div class="title">[[va.name]]</div>
                                         <div class="buttons">
                                             <div class="button deleteva" click="deleteValenceAngle([id])" title="Удалить"><img src="/static/editor/images/cross-20.png" alt="cross.png"></div>
-                                            <div class="button editva" onclick="editValenceAngle([id], [value])" title="Изменить угол"><img src="/static/editor/images/pen.svg" alt="pen"></div>
+                                            <div class="button editva" @click="editValenceAngle(va_id, va.value)" title="Изменить угол"><img src="/static/editor/images/pen.svg" alt="pen"></div>
                                         </div>
                                         <div class="value">[[va.value]]</div>
                                     </div>

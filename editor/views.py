@@ -9,7 +9,7 @@ from .models import MolFile, MatrixZ
 import os
 import json
 from .geom import Point, Line, Plane
-from math import sqrt, pi, acos, degrees
+from math import sqrt, pi, acos, degrees, isnan
 from django.db.transaction import atomic
 from .geom import Quaternion, Point
 from pyquaternion import Quaternion as Quater
@@ -473,8 +473,10 @@ def valence_angle_change(request):
 
 	try:
 		rotation_angle = float(request.POST["angle"])
+		if isnan(rotation_angle):
+			raise ValueError("Wrong float value for angle: NaN")
 	except ValueError:
-		return HttpResponse("Wrong float value for angle: {}".format(request.POST["angle"]))
+		return HttpResponse("Wrong float value for angle: {}".format(request.POST["angle"]), status=500)
 
 	aid = int(request.POST["id"])
 	angle = ValenceAngle.objects.get(id=aid)
@@ -691,7 +693,7 @@ def get_active_data(request):
 			})
 
 	# валентные углы
-	valence_angles = list()
+	valence_angles = dict()
 	va_from_doc = ValenceAngle.objects.filter(document=sdoc)
 	for angle in va_from_doc:
 		val = ValenceAngleLink.objects.filter(angle=angle)
@@ -706,8 +708,7 @@ def get_active_data(request):
 				buf.append(a.link.atom2.id)
 
 		if len(buf) == 3:  # у валентного угла всегда 3 атома
-			valence_angles.append({
-				"id": angle.id,
+			valence_angles[angle.id] = {
 				"name": angle.name,
 				"value": angle.value,
 				"atom1": buf[0],
@@ -715,7 +716,7 @@ def get_active_data(request):
 				"atom3": buf[2],
 				"link1": val[0].link.id,
 				"link2": val[1].link.id
-			})
+			}
 
 	adoc = {
 		"name": sdoc.name,
