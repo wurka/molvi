@@ -14,7 +14,7 @@ in any manner for assistance to any competitor of SPECTRUM.
 Cite this work as:  SPECTRUM. A.G. Yagola, I.V.Kochikov, G.M.Kuramshina, Yu.A.Pentin.
 Inverse problems of vibrational spectroscopy. VSP, Zeist, The Netherlands, 1999.
 
-Processing started at Mon Feb 04 14:17:59 2019
+Processing started at Mon Feb 11 14:30:23 2019
 
 Molecules to process: 1
 Input file(s):
@@ -338,6 +338,6 @@ H6y                   0.7712      3.0712 A
 H6z                   0.5635      2.3248 A
 
 
-Processing finished at Mon Feb 04 14:18:06 2019
+Processing finished at Mon Feb 11 14:30:30 2019
 
 All done.
