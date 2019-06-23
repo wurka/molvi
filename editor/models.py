@@ -57,6 +57,8 @@ class Atom(models.Model):
 		MolFile, on_delete=models.CASCADE, null=True)
 	molfileindex = models.IntegerField(default=-1)  # индекс атома внутри исходного .mol файла
 	documentindex = models.IntegerField(default=0)  # индекс атома внутри документа (виден пользователю)
+	mentableindex = models.IntegerField(default=0)  # индекс атома по таблице мендеелеева (водород - 0, углерод-6 )
+	valence = models.FloatField(default=1)  # валентность атома
 
 
 # содержание кластера

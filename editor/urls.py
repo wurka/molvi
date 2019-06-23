@@ -16,6 +16,7 @@ Including another URLconf
 # from django.contrib import admin
 from django.urls import path  # , include
 from . import views
+from . import optimizer
 
 urlpatterns = [
 	path('molvi.html', views.main_page),
@@ -39,4 +40,6 @@ urlpatterns = [
 	path('valence-angles-autotrace', views.valence_angles_autotrace),  # построить автоматически список валентных углов
 	path('valence-angles-delete', views.valence_angles_delete),  # удалить валентный угол
 	path('valence-angles-change', views.valence_angle_change),  # изменить валентный угол
+
+	path('debug-optimizer', optimizer.debug)
 ]

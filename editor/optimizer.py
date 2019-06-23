@@ -1,7 +1,10 @@
 # оптимизация энергии молекулы
 import numpy as np
 import math
-
+from typing import List
+from editor.models import Atom, Link, ValenceAngle, ValenceAngleLink, DihedralAngle, DihedralAngleLink
+from datetime import datetime
+from django.http import HttpResponse
 
 mt_table_size = 110
 p_be_1 = np.zeros((mt_table_size, mt_table_size), dtype=np.float32)
@@ -94,16 +97,16 @@ lam_28 = 1.69
 
 
 class Atom:
-	def __init__(self, x=0, y=0, z=0, mentab_index=0, name='H', valency=1):
+	def __init__(self, x=0, y=0, z=0, mentabindex=0, name='H', valency=1):
 		self.x = x
 		self.y = y
 		self.z = z
-		self.mentab_index = mentab_index
+		self.mentabindex = mentabindex
 		self.name = name
 		self.valency = 1
 
 
-def calc_bo_(i, j):  # r - расстояние между атомами, i, j - индексы элементов в таблице Менделеева
+def calc_bo_(atoms: List[Atom], i, j):  # r - расстояние между атомами, i, j - индексы элементов в таблице Менделеева
 	r = (atoms[i].x - atoms[j].x) ** 2 + (atoms[i].y - atoms[j].y) ** 2 + (atoms[i].z - atoms[j].z) ** 2
 	r = math.sqrt(r)
 
@@ -112,12 +115,12 @@ def calc_bo_(i, j):  # r - расстояние между атомами, i, j 
 	else:
 		r0 = 0.5 * (r_0[i] + r_0[j])
 
-	pb01 = pb0_1[atoms[i].mentab_index, atoms[j].mentab_index]
-	pb02 = pb0_2[atoms[i].mentab_index, atoms[j].mentab_index]
-	pb03 = pb0_3[atoms[i].mentab_index, atoms[j].mentab_index]
-	pb04 = pb0_4[atoms[i].mentab_index, atoms[j].mentab_index]
-	pb05 = pb0_5[atoms[i].mentab_index, atoms[j].mentab_index]
-	pb06 = pb0_6[atoms[i].mentab_index, atoms[j].mentab_index]
+	pb01 = pb0_1[atoms[i].mentabindex, atoms[j].mentabindex]
+	pb02 = pb0_2[atoms[i].mentabindex, atoms[j].mentabindex]
+	pb03 = pb0_3[atoms[i].mentabindex, atoms[j].mentabindex]
+	pb04 = pb0_4[atoms[i].mentabindex, atoms[j].mentabindex]
+	pb05 = pb0_5[atoms[i].mentabindex, atoms[j].mentabindex]
+	pb06 = pb0_6[atoms[i].mentabindex, atoms[j].mentabindex]
 
 	if r0 == 0:
 		r0 = r0
@@ -128,19 +131,25 @@ def calc_bo_(i, j):  # r - расстояние между атомами, i, j 
 	return ans
 
 
-def get_bond_energy():
-	global atoms
+def get_bond_energy(
+		atoms: List[Atom],
+		links: List[Link],
+		valenceAngles: List[ValenceAngle],
+		valenceAnglesLinks: List[ValenceAngleLink],
+		dihedralAngles: List[DihedralAngle],
+		dihedralAnglesLinks: List[DihedralAngleLink]):
+
 	# расчёт всех значений BO`_ij
 	n = len(atoms)
 	bo_ = np.zeros((n, n), dtype=np.float32)
 	for i in range(n):
 		for j in range(n):
-			bo_[i, j] = calc_bo_(atoms[i].mentab_index, atoms[j].mentab_index)
+			bo_[i, j] = calc_bo_(atoms, i, j)
 
 	# расчёт всех Δ_i
 	delta_ = np.zeros(n, dtype=np.float32)
 	for i in range(n):
-		delta_ = -atoms[i].valency
+		delta_[i] = -atoms[i].valency
 		for j in range(n):
 			delta_[i] += bo_[i, j]
 
@@ -163,15 +172,15 @@ def get_bond_energy():
 			f5 = 1/f5
 			boij = bo_ij*f1*f4*f5
 
-			pbe1 = p_be_1[atoms[i].]
-			ans += -d_e[i, j] * boij * math.exp(p_be_1 * (1-boij**pbe1))
+			pbe1 = p_be_1[atoms[i].mentabindex, atoms[j].mentabindex]
+			ans += -d_e[i, j] * boij * math.exp(pbe1 * (1-boij**pbe1))
 
 	print("bond energy: " + str(ans))
 
 	# E_over energy ###########
 	eover = 0
 	for i in range(len(atoms)):
-		pover = p_over[atoms[i].mentab_index]
+		pover = p_over[atoms[i].mentabindex]
 		eover += pover * delta_[i] * ( 1/(1 + math.exp(lam_6 * delta_[i])))
 
 	print("E_over energy: " + str(eover))
@@ -179,7 +188,10 @@ def get_bond_energy():
 	print("total energy: " + str(ans))
 
 	# E_under energy ##########
-	eunder = 0 #NEIGHBORS
+	# for aindx, atom in enumerate(atoms):
+
+
+
 
 	return ans
 
@@ -219,30 +231,33 @@ def get_coulomb_energy():
 	raise NotImplementedError("get_coulomb_energy")
 
 
-# получить полную энергию совокупности атомов
-def get_energy():
-	e_bond = get_bond_energy()
-	# e_over = get_over_energy()
-	# e_under = get_under_energy()
-	# e_val = get_val_energy()
-	# e_pen = get_pen_energy()
-	# e_tors = get_tors_energy()
-	# e_conj = get_conj_energy()
-	# e_vdwaals = get_vdwaals_energy()
-	# e_coulomb = get_coulomb_energy()
-
-	return e_bond
-
-
-if __name__ == "__main__":
+def debug(request):
+	print("you gona fun? ok...")
 	atoms = list()
-	atoms.append(Atom(name='H1', x=-1, y=1, mentab_index=0, valency=1))
-	atoms.append(Atom(name='H2', x=1, y=1, mentab_index=0, valency=1))
-	atoms.append(Atom(name='H3', x=-1, y=-1, mentab_index=0, valency=1))
-	atoms.append(Atom(name='C4', x=3, y=0, mentab_index=5, valency=1))
-	atoms.append(Atom(name='H5', x=4, y=1, mentab_index=0, valency=1))
-	atoms.append(Atom(name='H6', x=2, y=-1, mentab_index=0, valency=1))
-	atoms.append(Atom(name='H7', x=4, y=-1, mentab_index=0, valency=1))
-	atoms.append(Atom(name='C8', x=0, y=0, mentab_index=5, valency=1))
+	atoms.append(Atom(name='H1', x=-1, y=1, mentabindex=0, valency=1))
+	atoms.append(Atom(name='H2', x=1, y=1, mentabindex=0, valency=1))
+	atoms.append(Atom(name='H3', x=-1, y=-1, mentabindex=0, valency=1))
+	atoms.append(Atom(name='C4', x=3, y=0, mentabindex=5, valency=1))
+	atoms.append(Atom(name='H5', x=4, y=1, mentabindex=0, valency=1))
+	atoms.append(Atom(name='H6', x=2, y=-1, mentabindex=0, valency=1))
+	atoms.append(Atom(name='H7', x=4, y=-1, mentabindex=0, valency=1))
+	atoms.append(Atom(name='C8', x=0, y=0, mentabindex=5, valency=1))
 
-	print(get_energy())
+	links = list()
+	valenceAngles = list()
+	valenceAnglesLinks = list()
+	dihedralAngles = list()
+	dihedralAnglesLinks = list()
+
+
+	e = get_bond_energy(
+		atoms,
+		links,
+		valenceAngles,
+		valenceAnglesLinks,
+		dihedralAngles,
+		dihedralAnglesLinks)
+	ans = f"Total energy is: {e}"
+
+	return HttpResponse(str(datetime.now()) + "<br>" + ans)
+
