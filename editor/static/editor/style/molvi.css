@@ -144,7 +144,7 @@
   background: white;
   position: absolute;
   margin: 10px;
-  z-index: 1;
+  z-index: 2;
   display: none; }
   .openFileDialog .fileView {
     height: 300px;
@@ -462,5 +462,9 @@
   .dihedralAngles .buttons .flat-button {
     width: 130px;
     margin-left: 10px; }
+
+#optimize-button:hover {
+  background: pink;
+  cursor: default; }
 
 /*# sourceMappingURL=molvi.css.map */

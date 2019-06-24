@@ -64,6 +64,7 @@
         <img src="{% static 'editor/images/favicon.png' %}" alt="icon image" class="iconImage"/>
         <div class="header">
             <span>MolVi: Molecula View</span>
+            <span id="optimize-button">Optimize</span>
         </div>
         <div class="body">
             <div class="table">
@@ -110,7 +111,9 @@
                                         </div>
                                         <div class="change-length text t1-5" @click="openChangeLinkLengthPanel(id, link.value)"><img src="/static/editor/images/change-length.svg" alt="cl.png"></div>
                                         <div class="change-lengthcell text t1-5" onclick="openLinkRotationPanel([[id]], [[link.from]], [[link.to]])"><img src="/static/editor/images/spin.svg" alt="lr.png"></div>
-                                        <div class="deleteLink text t1-5" title="delete link" onclick="engine.deleteLink([[id]])"><img src="/static/editor/images/cross-20.png" alt="cross.png"></div>
+                                        <div class="deleteLink text t1-5" title="delete link" @click="deleteLink(id)">
+                                            <img src="/static/editor/images/cross-20.png" alt="cross.png">
+                                        </div>
                                     </div>
                                     <div class="line">
                                         <div class="current-value t1-5">[[link.value]]</div>

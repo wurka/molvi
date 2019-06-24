@@ -41,5 +41,6 @@ urlpatterns = [
 	path('valence-angles-delete', views.valence_angles_delete),  # удалить валентный угол
 	path('valence-angles-change', views.valence_angle_change),  # изменить валентный угол
 
-	path('debug-optimizer', optimizer.debug)
+	path('debug-optimizer', optimizer.debug),
+	path('optimize', optimizer.optimize),  # оптимизировать молекулу по энергии
 ]

@@ -123,6 +123,40 @@ let app = new Vue({
 
             $(".control-valence-angle .input-id").val(id);
             $(".control-valence-angle .current-value").html(currentValue);
+        },
+        deleteLink(id4del) {
+            console.log("on my way to delete link with id:");
+            console.log(id4del);
+
+            app.$delete(app.links, id4del);
+            engine.build3DFromDoc();
+            engine.buildHtmlFromDoc();
+
+            let links = [];
+            Object.keys(app.links).forEach((linkid)=>{
+                    links.push({
+                        "from": app.links[linkid].atom1,
+                        "to": app.links[linkid].atom2
+                    })
+                }
+            );
+
+            $.ajax({
+                url: "/molvi/save-links",
+                method: "GET",
+                data: {
+                    "clear": true,
+                    "links": JSON.stringify(links)
+                },
+                success: function (data) {
+                    console.log(data);
+                    engine.LoadAtomDataFromServer(true);
+                },
+                error: function (data) {
+                    alert("error. c console for details");
+                    console.warn(data.responseText);
+                }
+            });
         }
     },
     watch: {
@@ -907,31 +941,8 @@ class MolviEngine {
     }
 
     deleteLink(id4del) {
-        doc.links.forEach(function (link, indx) {
-            if (link.id === id4del) {
-                doc.links.splice(indx, 1);
-                link = null;
-            }
-        });
-        engine.build3DFromDoc();
-        engine.buildHtmlFromDoc();
-
-        $.ajax({
-            url: "/molvi/save-links",
-            method: "GET",
-            data: {
-                "clear": true,
-                "links": JSON.stringify(doc.links)
-            },
-            success: function (data) {
-                console.log(data);
-                engine.LoadAtomDataFromServer(true);
-            },
-            error: function (data) {
-                alert("error. c console for details");
-                console.warn(data.responseText);
-            }
-        });
+        console.log(id4del);
+        console.log("this kind of deleteLink is deleted. Sry for it.");
     }
 
     /**
@@ -1961,4 +1972,17 @@ $(document).ready(function(){
     console.log(htmlLabels.createLabel());
 
     closeControls();
+
+    $("#optimize-button").click(()=>{
+        $.ajax({
+            url: "/molvi/optimize",
+            success: (data)=> {
+                console.log(data);
+            },
+            error: (data) => {
+                console.error("error in optimizer");
+                document.write(data.responseText);
+            }
+        })
+    });
 });

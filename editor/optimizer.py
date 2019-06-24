@@ -5,6 +5,7 @@ from typing import List
 from editor.models import Atom, Link, ValenceAngle, ValenceAngleLink, DihedralAngle, DihedralAngleLink
 from datetime import datetime
 from django.http import HttpResponse
+from .models import Document
 
 mt_table_size = 110
 p_be_1 = np.zeros((mt_table_size, mt_table_size), dtype=np.float32)
@@ -96,16 +97,6 @@ lam_27 = 2.17
 lam_28 = 1.69
 
 
-class Atom:
-	def __init__(self, x=0, y=0, z=0, mentabindex=0, name='H', valency=1):
-		self.x = x
-		self.y = y
-		self.z = z
-		self.mentabindex = mentabindex
-		self.name = name
-		self.valency = 1
-
-
 def calc_bo_(atoms: List[Atom], i, j):  # r - расстояние между атомами, i, j - индексы элементов в таблице Менделеева
 	r = (atoms[i].x - atoms[j].x) ** 2 + (atoms[i].y - atoms[j].y) ** 2 + (atoms[i].z - atoms[j].z) ** 2
 	r = math.sqrt(r)
@@ -135,9 +126,7 @@ def get_bond_energy(
 		atoms: List[Atom],
 		links: List[Link],
 		valenceAngles: List[ValenceAngle],
-		valenceAnglesLinks: List[ValenceAngleLink],
-		dihedralAngles: List[DihedralAngle],
-		dihedralAnglesLinks: List[DihedralAngleLink]):
+		dihedralAngles: List[DihedralAngle]):
 
 	# расчёт всех значений BO`_ij
 	n = len(atoms)
@@ -229,6 +218,27 @@ def get_vdwaals_energy():
 
 def get_coulomb_energy():
 	raise NotImplementedError("get_coulomb_energy")
+
+
+def optimize(request):
+	active_doc = Document.objects.get(is_active=True)
+
+	atoms = Atom.objects.filter(document=active_doc)
+	links = Link.objects.filter(document=active_doc)
+	valence_angles = ValenceAngle.objects.filter(document=active_doc)
+	dihedral_angles = DihedralAngle.objects.filter(document=active_doc)
+
+	e = get_bond_energy(
+		atoms,
+		links,
+		valence_angles,
+		dihedral_angles
+	)
+
+	ans = f"atoms: {len(atoms)}"
+	ans = f"energy: {e}"
+	return HttpResponse(ans)
+
 
 
 def debug(request):
