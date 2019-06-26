@@ -206,6 +206,15 @@ def mol_file_data(file_name: str, molfile: MolFile = None):
 				new_atom.documentindex = atom_number
 				atom_number += 1
 				new_atom.save()
+
+				if new_atom.name == "H":
+					new_atom.valence = 1
+					new_atom.mentableindex = 0
+
+				if new_atom.name == "C":
+					new_atom.valence = 4
+					new_atom.mentableindex = 5
+
 				atoms.append(new_atom)
 
 			except ValueError as ex:

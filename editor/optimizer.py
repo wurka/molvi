@@ -97,8 +97,22 @@ lam_27 = 2.17
 lam_28 = 1.69
 
 
-def calc_bo_(atoms: List[Atom], i, j):  # r - расстояние между атомами, i, j - индексы элементов в таблице Менделеева
-	r = (atoms[i].x - atoms[j].x) ** 2 + (atoms[i].y - atoms[j].y) ** 2 + (atoms[i].z - atoms[j].z) ** 2
+class SourceError(Exception):
+	def __init__(self, message):
+		super(message)
+		self.message = message
+
+
+def calc_bo_(atom1: Atom, atom2: Atom):  # r - расстояние между атомами, i, j - индексы элементов в таблице Менделеева
+	i = atom1.mentableindex
+	j = atom2.mentableindex
+
+	if r_0[i] == 0:
+		raise SourceError("Таблица r_0 не содержит данных для элемента (таблица Менделеева) №{}".format(i))
+	if r_0[j] == 0:
+		raise SourceError("Таблица r_0 не содержит данных для элемента (таблица Менделеева) №{}".format(j))
+
+	r = (atom1.x - atom2.x) ** 2 + (atom1.y - atom2.y) ** 2 + (atom1.z - atom2.z) ** 2
 	r = math.sqrt(r)
 
 	if i == j:
@@ -106,49 +120,82 @@ def calc_bo_(atoms: List[Atom], i, j):  # r - расстояние между а
 	else:
 		r0 = 0.5 * (r_0[i] + r_0[j])
 
-	pb01 = pb0_1[atoms[i].mentabindex, atoms[j].mentabindex]
-	pb02 = pb0_2[atoms[i].mentabindex, atoms[j].mentabindex]
-	pb03 = pb0_3[atoms[i].mentabindex, atoms[j].mentabindex]
-	pb04 = pb0_4[atoms[i].mentabindex, atoms[j].mentabindex]
-	pb05 = pb0_5[atoms[i].mentabindex, atoms[j].mentabindex]
-	pb06 = pb0_6[atoms[i].mentabindex, atoms[j].mentabindex]
+	pb01 = pb0_1[atom1.mentableindex, atom2.mentableindex]
+	pb02 = pb0_2[atom1.mentableindex, atom2.mentableindex]
+	pb03 = pb0_3[atom1.mentableindex, atom2.mentableindex]
+	pb04 = pb0_4[atom1.mentableindex, atom2.mentableindex]
+	pb05 = pb0_5[atom1.mentableindex, atom2.mentableindex]
+	pb06 = pb0_6[atom1.mentableindex, atom2.mentableindex]
 
 	if r0 == 0:
 		r0 = r0
 
-	ans = np.exp(pb01 * (r / r0)**pb02)
-	ans += np.exp(pb03 * (r / r0)**pb04)
-	ans += np.exp(pb05 * (r / r0)**pb06)
+	ans = np.exp(pb01 * (r / r0) ** pb02)
+	ans += np.exp(pb03 * (r / r0) ** pb04)
+	ans += np.exp(pb05 * (r / r0) ** pb06)
 	return ans
 
 
 def get_bond_energy(
-		atoms: List[Atom],
-		links: List[Link],
-		valenceAngles: List[ValenceAngle],
-		dihedralAngles: List[DihedralAngle]):
+		links: List[Link]):
+	ebond = 0
 
-	# расчёт всех значений BO`_ij
-	n = len(atoms)
-	bo_ = np.zeros((n, n), dtype=np.float32)
-	for i in range(n):
-		for j in range(n):
-			bo_[i, j] = calc_bo_(atoms, i, j)
+	# bond - это энергия связи
+	for link in links:  # цикл по всем связям
+		d_i = 0
+		d_j = 0
+		val_i = link.atom1.valence
+		val_j = link.atom2.valence
+		bo_ij = calc_bo_(link.atom1, link.atom2)
 
-	# расчёт всех Δ_i
-	delta_ = np.zeros(n, dtype=np.float32)
-	for i in range(n):
-		delta_[i] = -atoms[i].valency
-		for j in range(n):
-			delta_[i] += bo_[i, j]
+		# d_i, цикл по всем связям с link.atom1
+		for link2 in links:
+			if link2.atom1 == link.atom1:
+				atom2 = link2.atom2
+			elif link2.atom2 == link.atom1:
+				atom2 = link2.atom1
+			else:
+				continue
+			d_i += calc_bo_(link.atom1, atom2)
 
-	ans = 0  # энергия Ebond
-	for i in range(n):  # цикл по всем атомам
+		# d_j, цикл по всем связям с link.atom2
+		for link2 in links:
+			if link2.atom1 == link.atom2:
+				atom2 = link2.atom2
+			elif link2.atom2 == link.atom2:
+				atom2 = link2.atom1
+			else:
+				continue
+			d_j += calc_bo_(link.atom2, atom2)
+
+		d_i = max(d_i - link.atom1.valence, 0)
+		d_j = max(d_j - link.atom2.valence, 0)
+
+		f2 = math.exp(-lam_1 * d_i) + math.exp(-lam_1 * d_j)
+		f3 = 1.0/lam_2 * math.log(0.5 * (math.exp(-lam_2 * d_i) + math.exp(-lam_2 * d_j)))
+		f1 = (val_i + f2) / (val_i + f2 + f3)
+		f1 += (val_j + f2) / (val_j + f2 + f3)
+		f1 *= 0.5
+		f4 = 1.0 + math.exp(-lam_3 * (lam_4 * bo_ij * bo_ij - d_i) + lam_5)
+		f4 = 1.0 / f4
+		f5 = 1.0 + math.exp(-lam_3 * (lam_4 * bo_ij * bo_ij - d_j) + lam_5)
+		f5 = 1.0 / f5
+		boij = bo_ij * f1 * f4 * f5
+
+		pbe1 = p_be_1[link.atom1.mentableindex, link.atom2.mentableindex]
+		plus = -d_e[link.atom1.mentableindex, link.atom2.mentableindex] * boij * math.exp(pbe1 * (1 - boij ** pbe1))
+		ebond += plus
+
+	return ebond
+
+
+"""
+for i in range(n):  # цикл по всем атомам
 		for j in range(n):
 			d_i = delta_[i]
 			d_j = delta_[j]
-			val_i = atoms[i].valency
-			val_j = atoms[j].valency
+			val_i = atoms[i].valence
+			val_j = atoms[j].valence
 			bo_ij = bo_[i, j]
 			f2 = math.exp(-lam_1 * d_i) + math.exp(-lam_1 * d_j)
 			f3 = 0.5*lam_2 * math.log(0.5*(math.exp(-lam_2*d_i) + math.exp(-lam_2*d_j)))
@@ -161,9 +208,10 @@ def get_bond_energy(
 			f5 = 1/f5
 			boij = bo_ij*f1*f4*f5
 
-			pbe1 = p_be_1[atoms[i].mentabindex, atoms[j].mentabindex]
+			pbe1 = p_be_1[atoms[i].mentableindex, atoms[j].mentableindex]
 			ans += -d_e[i, j] * boij * math.exp(pbe1 * (1-boij**pbe1))
 
+	return ans
 	print("bond energy: " + str(ans))
 
 	# E_over energy ###########
@@ -179,17 +227,13 @@ def get_bond_energy(
 	# E_under energy ##########
 	# for aindx, atom in enumerate(atoms):
 
-
-
-
 	return ans
+	"""
 
 
 def get_over_energy():
 	global atoms
 	ans = 0
-
-
 
 
 def get_under_energy():
@@ -228,17 +272,15 @@ def optimize(request):
 	valence_angles = ValenceAngle.objects.filter(document=active_doc)
 	dihedral_angles = DihedralAngle.objects.filter(document=active_doc)
 
-	e = get_bond_energy(
-		atoms,
-		links,
-		valence_angles,
-		dihedral_angles
-	)
+	try:
+		e = get_bond_energy(links)
+	except SourceError as e:
+		ans = "Error while optimize: " + e.message
+		return HttpResponse(ans, status=500)
 
 	ans = f"atoms: {len(atoms)}"
 	ans = f"energy: {e}"
 	return HttpResponse(ans)
-
 
 
 def debug(request):
@@ -259,7 +301,6 @@ def debug(request):
 	dihedralAngles = list()
 	dihedralAnglesLinks = list()
 
-
 	e = get_bond_energy(
 		atoms,
 		links,
@@ -270,4 +311,3 @@ def debug(request):
 	ans = f"Total energy is: {e}"
 
 	return HttpResponse(str(datetime.now()) + "<br>" + ans)
-
