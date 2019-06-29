@@ -24,6 +24,34 @@ let app = new Vue({
     el: '#app',
     delimiters: ["[[", "]]"],
     data: {
+        optimisationLoading: true,
+        optimisers: [
+            {
+                id: 1,
+                selected: true,
+                label: "C-C [10-12]"
+            },
+            {
+                id: 2,
+                selected: true,
+                label: "C-C [10-12]"
+            },
+            {
+                id: 3,
+                selected: false,
+                label: "C-C [10-12]"
+            },
+            {
+                id: 4,
+                selected: true,
+                label: "C-C [10-12]"
+            },
+            {
+                id: 5,
+                selected: false,
+                label: "C-C [10-12]"
+            },
+        ],
         atoms: {
             10: {
                 name: "no name",
@@ -72,9 +100,56 @@ let app = new Vue({
         }
     },
     methods: {
+        selectOption(optionId) {
+            console.log(optionId);
+            app.optimisers.forEach((opt)=>{
+                if (opt.id === parseInt(optionId)) {
+                    opt.selected = !opt.selected;
+                }
+            })
+        },
+        optimise:()=> {
+            console.log("optimism");
+            $.ajax({
+                url: "/molvi/optimize",
+                success: (data)=> {
+                    //console.log(data);
+                    //let psurl = "data:image/png;base64,"+ data;
+                    //console.log(data);
+                    let imgdata = `data:image/png;base64,${data}`;
+                    $("#iimmgg").attr('src', imgdata);
+                    let win = window.open();
+                    win.document.write('<iframe src="' + imgdata  + '" frameborder="0" style="width:100%; height:100%;" allowfullscreen></iframe>');
+                },
+                error: (data) => {
+                    console.error("error in optimizer");
+                    document.write(data.responseText);
+                }
+            })
+        },
+        closeOptimisation() {
+            $("#optimize-links").fadeOut(300);
+        },
+        openOptimisation() {
+            $("#optimize-links").fadeIn(200);
+            app.optimisationLoading = true;
+            $.ajax({
+                url: "/molvi/get-optimise-sources",
+                success: (data)=>{
+                    app.optimisationLoading = false;
+                    let ans = JSON.parse(data);
+                    app.optimisers = ans;
+                },
+                error: (data)=> {
+                    app.optimisationLoading = false;
+                    console.error("Error while getting optimisers");
+                    console.error(data.responseText);
+                }
+            })
+        },
         selectAtomsById(atomList) {
             this.selectedAtomIds = atomList;
-            console.log("now selected:")
+            console.log("now selected:");
             console.log(atomList);
         },
         unselectLinks() {
@@ -167,6 +242,12 @@ let app = new Vue({
             engine.selectAtomsById(val);
         }
     },
+    mounted: ()=>{
+        this.requestAnimationFrame(()=>{
+            app.openOptimisation();
+        });
+
+    }
 });
 
 function loading_display(ison) {
@@ -1974,15 +2055,6 @@ $(document).ready(function(){
     closeControls();
 
     $("#optimize-button").click(()=>{
-        $.ajax({
-            url: "/molvi/optimize",
-            success: (data)=> {
-                console.log(data);
-            },
-            error: (data) => {
-                console.error("error in optimizer");
-                document.write(data.responseText);
-            }
-        })
+        app.openOptimisation();
     });
 });

@@ -26,6 +26,33 @@
         <div class="text">Working</div>
     </div>
     <div class="layout" id="app">
+        <div id="optimize-links">
+            <div class="opti-loading" v-if="optimisationLoading">...Загрузка данных...</div>
+            <div class="other-content" v-else>
+                <h3>Выберите связи для оптимизации:</h3>
+                <div class="optimise-option" v-for="option in optimisers"
+                    @click="selectOption(option.id)">
+                    <div class="selector" v-bind:class="{selected: option.selected}">
+                        <span v-if="option.selected">&times;</span>
+                    </div>
+                    <div class="label">Связь [[option.label]]</div>
+                </div>
+                <div class="range">
+                    <div class="from">От</div>
+                    <input type="text" name="optimise-from" value="0.1">
+                    <div class="to">до</div>
+                    <input type="text" name="optimise-to" value="4">
+                    <div class="step">с шагом</div>
+                    <input type="text" name="optimise-step" value="0.1">
+                </div>
+                <div class="buttons">
+                    <input type="button" class="button buttonok" @click="optimise" value="OK" id="do-optimisation">
+                    <input type="button" class="button buttoncancel" @click="closeOptimisation" value="Отмена">
+                </div>
+                <img src="" alt="" id="iimmgg" width="400px">
+            </div>
+
+        </div>
         <div id="saveFileDialog">
             <div class="save-mode">
                 <div class="line">

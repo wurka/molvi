@@ -6,6 +6,12 @@ from editor.models import Atom, Link, ValenceAngle, ValenceAngleLink, DihedralAn
 from datetime import datetime
 from django.http import HttpResponse
 from .models import Document
+import json
+import io
+import matplotlib.pyplot as plt
+import base64
+from .views import edit_link_set_length
+
 
 mt_table_size = 110
 p_be_1 = np.zeros((mt_table_size, mt_table_size), dtype=np.float32)
@@ -130,10 +136,31 @@ def calc_bo_(atom1: Atom, atom2: Atom):  # r - расстояние между �
 	if r0 == 0:
 		r0 = r0
 
-	ans = np.exp(pb01 * (r / r0) ** pb02)
-	ans += np.exp(pb03 * (r / r0) ** pb04)
-	ans += np.exp(pb05 * (r / r0) ** pb06)
+	ans = 0
+	if pb02 != 0:
+		ans += np.exp(pb01 * (r / r0) ** pb02)
+	if pb04 != 0:
+		ans += np.exp(pb03 * (r / r0) ** pb04)
+	if pb06 != 0:
+		ans += np.exp(pb05 * (r / r0) ** pb06)
 	return ans
+
+
+def get_delta(atom: Atom, links: List[Link]):
+	"""Рассчёт дельты для атома"""
+	delta = 0
+	# d_i, цикл по всем связям с atom
+	for link in links:
+		if link.atom1 == atom:
+			atom2 = link.atom2
+		elif link.atom2 == atom:
+			atom2 = link.atom1
+		else:
+			continue
+		delta += calc_bo_(atom, atom2)
+
+	delta -= atom.valence
+	return delta
 
 
 def get_bond_energy(
@@ -149,30 +176,15 @@ def get_bond_energy(
 		bo_ij = calc_bo_(link.atom1, link.atom2)
 
 		# d_i, цикл по всем связям с link.atom1
-		for link2 in links:
-			if link2.atom1 == link.atom1:
-				atom2 = link2.atom2
-			elif link2.atom2 == link.atom1:
-				atom2 = link2.atom1
-			else:
-				continue
-			d_i += calc_bo_(link.atom1, atom2)
+		d_i = get_delta(link.atom1, links)
 
 		# d_j, цикл по всем связям с link.atom2
-		for link2 in links:
-			if link2.atom1 == link.atom2:
-				atom2 = link2.atom2
-			elif link2.atom2 == link.atom2:
-				atom2 = link2.atom1
-			else:
-				continue
-			d_j += calc_bo_(link.atom2, atom2)
-
-		d_i = max(d_i - link.atom1.valence, 0)
-		d_j = max(d_j - link.atom2.valence, 0)
+		d_j = get_delta(link.atom2, links)
 
 		f2 = math.exp(-lam_1 * d_i) + math.exp(-lam_1 * d_j)
 		f3 = 1.0/lam_2 * math.log(0.5 * (math.exp(-lam_2 * d_i) + math.exp(-lam_2 * d_j)))
+		# if f3 < 0:
+		#	f3 = 0  # в оригинале нет такого ограничения
 		f1 = (val_i + f2) / (val_i + f2 + f3)
 		f1 += (val_j + f2) / (val_j + f2 + f3)
 		f1 *= 0.5
@@ -183,7 +195,15 @@ def get_bond_energy(
 		boij = bo_ij * f1 * f4 * f5
 
 		pbe1 = p_be_1[link.atom1.mentableindex, link.atom2.mentableindex]
-		plus = -d_e[link.atom1.mentableindex, link.atom2.mentableindex] * boij * math.exp(pbe1 * (1 - boij ** pbe1))
+		de = d_e[link.atom1.mentableindex, link.atom2.mentableindex]
+		plus = -de * bo_ij * math.exp(pbe1 * (1 - boij ** pbe1))
+		if np.isnan(plus):  # скорее всего, не получилось вычислить степень (дробную): boij ** pbe1
+			if np.isnan(boij ** pbe1):  # да, так и есть
+				plus = 0
+				print("Wrong (boij ** pbe1) values. Complex numbers obtained!")
+			else:
+				print("Some shit happened")
+				raise ValueError("see me, fix me!")
 		ebond += plus
 
 	return ebond
@@ -264,7 +284,52 @@ def get_coulomb_energy():
 	raise NotImplementedError("get_coulomb_energy")
 
 
+def get_optimise_sources(request):
+	active_doc = Document.objects.get(is_active=True)
+	ans = list()
+
+	links = Link.objects.filter(document=active_doc)
+	for link in links:
+		name1 = link.atom1.name
+		name2 = link.atom2.name
+
+		ans.append({
+			"selected": True,
+			"type": 'link',
+			"id": link.id,
+			"label": f"{name1}{name2}: ({name1}{link.atom1.documentindex}-{name2}{link.atom2.documentindex})"
+		})
+
+	ans = json.dumps(ans)
+	return HttpResponse(ans)
+
+
 def optimize(request):
+	need_to_step = True
+	for x in ["from", "to", "step", "links2stretch"]:
+		if x not in request.GET:
+			need_to_step = False
+
+	if False:
+		val = float(request.GET["from"])
+		to = float(request.GET["to"])
+		step = float(request.GET["step"])
+		links2stretch = json.loads(request.GET["links2stretch"])
+
+		while val <= to:
+			# применение значений
+			stretched_links = [Link.objects.get(id=x) for x in links2stretch]
+
+			#class dummy: pass
+			#temp_request = dummy
+			#temp_request.GET = {
+			#	"link":
+			#}
+
+			edit_link_set_length()
+
+			val += step
+
 	active_doc = Document.objects.get(is_active=True)
 
 	atoms = Atom.objects.filter(document=active_doc)
@@ -278,8 +343,18 @@ def optimize(request):
 		ans = "Error while optimize: " + e.message
 		return HttpResponse(ans, status=500)
 
-	ans = f"atoms: {len(atoms)}"
-	ans = f"energy: {e}"
+	# ans = f"atoms: {len(atoms)}"
+	ans = f"bond energy: {e}"
+
+	# x =#  [1, 2, 3]
+	# y = [11, 12,33]
+	# plt.plot(x, y)
+	# buf = io.BytesIO()
+	# plt.savefig(buf, format='png')
+	# buf.seek(0)
+	# file_bytes = base64.b64encode(buf.getvalue())
+	# return HttpResponse(file_bytes.decode('utf8'), content_type="image/png")
+
 	return HttpResponse(ans)
 
 

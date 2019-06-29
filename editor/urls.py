@@ -43,4 +43,5 @@ urlpatterns = [
 
 	path('debug-optimizer', optimizer.debug),
 	path('optimize', optimizer.optimize),  # оптимизировать молекулу по энергии
+	path('get-optimise-sources', optimizer.get_optimise_sources)
 ]

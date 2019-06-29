@@ -502,3 +502,53 @@
 #optimize-button:hover
   background: pink
   cursor: default
+
+#optimize-links
+  z-index: 3
+  background: white
+  position: absolute
+  border: 1px solid black
+  border-radius: 4px
+  left: 50%
+  width: 600px
+  margin-left: -300px
+  margin-top: 200px
+  padding: 30px
+
+  .optimise-option
+    padding: 3px
+  .selector
+    border: 1px solid steelblue
+    display: inline-block
+    width: 25px
+    height: 25px
+    vertical-align: middle
+    text-align: center
+    border-radius: 3px
+    background: white
+    cursor: default
+    &:hover
+      background: pink
+      opacity: 0.8
+  .selector.selected
+    background: lightsteelblue
+
+  .range
+    margin: 10px
+    .from
+      display: inline-block
+    .to
+      display: inline-block
+    .step
+      display: inline-block
+    input
+      width: 50px
+
+  .label
+    display: inline-block
+    vertical-align: middle
+
+  .buttons
+    text-align: right
+    input
+      min-width: 100px

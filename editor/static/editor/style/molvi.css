@@ -467,4 +467,50 @@
   background: pink;
   cursor: default; }
 
+#optimize-links {
+  z-index: 3;
+  background: white;
+  position: absolute;
+  border: 1px solid black;
+  border-radius: 4px;
+  left: 50%;
+  width: 600px;
+  margin-left: -300px;
+  margin-top: 200px;
+  padding: 30px; }
+  #optimize-links .optimise-option {
+    padding: 3px; }
+  #optimize-links .selector {
+    border: 1px solid steelblue;
+    display: inline-block;
+    width: 25px;
+    height: 25px;
+    vertical-align: middle;
+    text-align: center;
+    border-radius: 3px;
+    background: white;
+    cursor: default; }
+    #optimize-links .selector:hover {
+      background: pink;
+      opacity: 0.8; }
+  #optimize-links .selector.selected {
+    background: lightsteelblue; }
+  #optimize-links .range {
+    margin: 10px; }
+    #optimize-links .range .from {
+      display: inline-block; }
+    #optimize-links .range .to {
+      display: inline-block; }
+    #optimize-links .range .step {
+      display: inline-block; }
+    #optimize-links .range input {
+      width: 50px; }
+  #optimize-links .label {
+    display: inline-block;
+    vertical-align: middle; }
+  #optimize-links .buttons {
+    text-align: right; }
+    #optimize-links .buttons input {
+      min-width: 100px; }
+
 /*# sourceMappingURL=molvi.css.map */
