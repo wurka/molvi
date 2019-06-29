@@ -176,10 +176,11 @@ def get_bond_energy(
 		bo_ij = calc_bo_(link.atom1, link.atom2)
 
 		# d_i, цикл по всем связям с link.atom1
-		d_i = get_delta(link.atom1, links)
+		links2delta = [l for l in links if l != link]
+		d_i = get_delta(link.atom1, links2delta)
 
 		# d_j, цикл по всем связям с link.atom2
-		d_j = get_delta(link.atom2, links)
+		d_j = get_delta(link.atom2, links2delta)
 
 		f2 = math.exp(-lam_1 * d_i) + math.exp(-lam_1 * d_j)
 		f3 = 1.0/lam_2 * math.log(0.5 * (math.exp(-lam_2 * d_i) + math.exp(-lam_2 * d_j)))
@@ -196,7 +197,7 @@ def get_bond_energy(
 
 		pbe1 = p_be_1[link.atom1.mentableindex, link.atom2.mentableindex]
 		de = d_e[link.atom1.mentableindex, link.atom2.mentableindex]
-		plus = -de * bo_ij * math.exp(pbe1 * (1 - boij ** pbe1))
+		plus = -de * boij * math.exp(pbe1 * (1 - boij ** pbe1))
 		if np.isnan(plus):  # скорее всего, не получилось вычислить степень (дробную): boij ** pbe1
 			if np.isnan(boij ** pbe1):  # да, так и есть
 				plus = 0
@@ -204,7 +205,12 @@ def get_bond_energy(
 			else:
 				print("Some shit happened")
 				raise ValueError("see me, fix me!")
-		ebond += plus
+		# ebond += plus # uncomment it
+		#if (link.atom1.name == 'C' and link.atom2.name == "H") or (link.atom1.name == 'C' and link.atom2.name == "H"):
+			return plus
+		if link.atom1.name == 'C' and link.atom2.name == "C":
+			return plus
+		#return ebond  # delete it
 
 	return ebond
 
@@ -310,52 +316,66 @@ def optimize(request):
 		if x not in request.GET:
 			need_to_step = False
 
-	if False:
+	if need_to_step:
 		val = float(request.GET["from"])
 		to = float(request.GET["to"])
 		step = float(request.GET["step"])
 		links2stretch = json.loads(request.GET["links2stretch"])
 
+		xvals = list()
+		yvals = list()
+
 		while val <= to:
 			# применение значений
 			stretched_links = [Link.objects.get(id=x) for x in links2stretch]
 
-			#class dummy: pass
-			#temp_request = dummy
-			#temp_request.GET = {
-			#	"link":
-			#}
+			class Dummy: pass  # класс для формирования временного расчёта
 
-			edit_link_set_length()
+			# изменение длинн связей
+			for slink in stretched_links:
+				temp_request = Dummy()
+				temp_request.GET = {
+					"link": slink.id,
+					"length": val
+				}
+
+				edit_link_set_length(temp_request)
+
+			active_doc = Document.objects.get(is_active=True)
+
+			atoms = Atom.objects.filter(document=active_doc)
+			links = Link.objects.filter(document=active_doc)
+			valence_angles = ValenceAngle.objects.filter(document=active_doc)
+			dihedral_angles = DihedralAngle.objects.filter(document=active_doc)
+
+			try:
+				e = get_bond_energy(links)
+			except SourceError as e:
+				ans = "Error while optimize: " + e.message
+				return HttpResponse(ans, status=500)
+
+			# ans = f"atoms: {len(atoms)}"
+			ans = f"bond energy: {e}"
+			print(f"Done for length: {val}")
+
+			xvals.append(val)
+			yvals.append(e)
 
 			val += step
 
-	active_doc = Document.objects.get(is_active=True)
+		plt.clf()
+		plt.grid(color='gray', linestyle='--', linewidth=1)
+		axes = plt.gca()
+		# axes.set_ylim([-180, 0])
+		plt.plot(xvals, yvals, marker='x')
 
-	atoms = Atom.objects.filter(document=active_doc)
-	links = Link.objects.filter(document=active_doc)
-	valence_angles = ValenceAngle.objects.filter(document=active_doc)
-	dihedral_angles = DihedralAngle.objects.filter(document=active_doc)
+		buf = io.BytesIO()
+		plt.savefig(buf, format='png')
+		buf.seek(0)
+		file_bytes = base64.b64encode(buf.getvalue())
+		return HttpResponse(file_bytes.decode('utf8'), content_type="image/png")
 
-	try:
-		e = get_bond_energy(links)
-	except SourceError as e:
-		ans = "Error while optimize: " + e.message
-		return HttpResponse(ans, status=500)
-
-	# ans = f"atoms: {len(atoms)}"
-	ans = f"bond energy: {e}"
-
-	# x =#  [1, 2, 3]
-	# y = [11, 12,33]
-	# plt.plot(x, y)
-	# buf = io.BytesIO()
-	# plt.savefig(buf, format='png')
-	# buf.seek(0)
-	# file_bytes = base64.b64encode(buf.getvalue())
-	# return HttpResponse(file_bytes.decode('utf8'), content_type="image/png")
-
-	return HttpResponse(ans)
+	return HttpResponse("Oooops")
 
 
 def debug(request):

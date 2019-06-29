@@ -109,9 +109,24 @@ let app = new Vue({
             })
         },
         optimise:()=> {
+            let linkIds = [],
+                from = $("input[name=optimise-from]").val(),
+                to = $("input[name=optimise-to]").val(),
+                step = $("input[name=optimise-step]").val();
+
+            $(".optimise-option .selected input[type=hidden]").each((indx, value)=> {
+                linkIds.push($(value).val());
+            });
+
             console.log("optimism");
             $.ajax({
                 url: "/molvi/optimize",
+                data: {
+                    "links2stretch": JSON.stringify(linkIds),
+                    "from": from,
+                    "to": to,
+                    "step": step
+                },
                 success: (data)=> {
                     //console.log(data);
                     //let psurl = "data:image/png;base64,"+ data;

@@ -33,6 +33,7 @@
                 <div class="optimise-option" v-for="option in optimisers"
                     @click="selectOption(option.id)">
                     <div class="selector" v-bind:class="{selected: option.selected}">
+                        <input type="hidden" name="linkid" v-bind:value="option.id">
                         <span v-if="option.selected">&times;</span>
                     </div>
                     <div class="label">Связь [[option.label]]</div>
