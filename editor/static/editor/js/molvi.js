@@ -302,7 +302,7 @@ var workDocument = new WDocument();
 
 
 // создание link по выбранным объектам
-var sources = []
+var sources = [];
 function linkCreation(ids){
     "use strict";
 

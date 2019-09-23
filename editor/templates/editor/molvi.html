@@ -259,7 +259,11 @@
                                 <div class="mybutton" onclick="engine.closeRotationHtml()">Oтмена</div>
                             </div>
                         </div>
-                        <div class="display" id="display" onmouseleave="view.disableControls()" onmouseenter="view.enableControls()" u></div>
+                        <div class="display" id="display"
+                             onmouseleave="view.disableControls()"
+                             onmouseenter="view.enableControls()"
+                             onclick="MolviEngine.onMouseDown()"
+                        ></div>
                     </div>
                 </div>
             </div>

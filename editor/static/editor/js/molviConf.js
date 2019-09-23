@@ -118,7 +118,7 @@ var MolviConf = {
     }, 
     getAtomRadius : function(atomName){
         //возвращается радиус атома. Название элемента - atomName
-        var factor = 0.5;
+        let factor = 0.5;
         if (MolviConf.AtomRadius[atomName] === undefined){
             return MolviConf.AtomRadius["Other"] * factor;
         } else {

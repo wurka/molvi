@@ -748,6 +748,7 @@ class MolviEngine {
 
     static onMouseDown(/*event*/) {
         let pointedAtoms = [];
+        console.log(11);
 
         if (view.highlights.length === 1) {
             let point = view.highlights[0].point, // точка пересечения raycaster'a с объектом
@@ -755,8 +756,11 @@ class MolviEngine {
                 owners = [],
                 sx, sy, sz;
             // вычисление того, какому объекту принадлежит эта точка
-            doc.clusters.forEach(function (cluster) {
-                cluster.atomList.forEach(function (atom) {
+            Object.keys(app.clusters).forEach((key)=>{
+                let cluster = app.clusters[key];
+
+                cluster.atoms.forEach(function (atomid) {
+                    let atom = app.atoms[atomid];
                     r = MolviConf.getAtomRadius(atom.name);
 
                     sx = (point.x - atom.x)*(point.x - atom.x);
@@ -771,8 +775,8 @@ class MolviEngine {
             });
 
             owners.forEach(function (owner) {
-                engine.selectAtomById(owner.id);
-                pointedAtoms.push(owner.id);
+                engine.selectAtomById(owner.documentindex);
+                pointedAtoms.push(owner.documentindex);
             });
         }
 
@@ -1336,7 +1340,7 @@ class MolviEngine {
         //engine.build3DFromDoc();
     }
 
-    rotateCluster(centerAtomId = null, dx = null, dy = null, dz = null) {
+        rotateCluster(centerAtomId = null, dx = null, dy = null, dz = null) {
         if (centerAtomId == null) {
             engine.unselectAtoms();
 
@@ -1363,7 +1367,20 @@ class MolviEngine {
             oz = 0,
             atoms = [];
 
-        doc.clusters.forEach(function (ccluster) {
+        //цикл по всем кластерам
+        Object.keys(app.clusters).forEach((key)=>{
+            let ccluster = app.clusters[key];
+
+            ccluster.atoms.forEach(function (atom) {
+                if (atom === originId) {
+                    cluster = ccluster;
+                    ox = atom.x;
+                    oy = atom.y;
+                    oz = atom.z;
+                }
+            });
+        });
+        /*doc.clusters.forEach(function (ccluster) {
             ccluster.atomList.forEach(function (atom) {
                 if (atom.id == originId) {
                     cluster = ccluster;
@@ -1372,11 +1389,15 @@ class MolviEngine {
                     oz = atom.z;
                 }
             });
-        });
+        });*/
 
         if (cluster != null) {
-            cluster.atomList.forEach(function (atom) {
-                atoms.push({"x": atom.x, "y": atom.y, "z": atom.z});
+            cluster.atoms.forEach(function (atom) {
+                atoms.push({
+                    "x": app.atoms[atom].x,
+                    "y": app.atoms[atom].y,
+                    "z": app.atoms[atom].z
+                });
             });
             var ax = parseFloat($("#tr_dx").val()),
                 ay = parseFloat($("#tr_dy").val()),
@@ -1683,6 +1704,9 @@ class MolviView {
         console.log("controls OFF");
     }
 
+    click() {
+        console.log(1);
+    }
     /**
      * Обработка наведения на элементы
      */
