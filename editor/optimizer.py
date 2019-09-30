@@ -311,6 +311,12 @@ def get_optimise_sources(request):
 
 
 def optimize(request):
+	f = 3e12  # частота, Гц
+
+	return HttpResponse("OK")
+
+
+def optimize_legacy(request):
 	need_to_step = True
 	for x in ["from", "to", "step", "links2stretch"]:
 		if x not in request.GET:

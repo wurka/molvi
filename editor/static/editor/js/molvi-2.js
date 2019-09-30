@@ -805,7 +805,9 @@ class MolviEngine {
             //engine.linkCreationSource
         } else if (engine.controlMode === "dihedral creation") {
             if (pointedAtoms.length >= 1) {
-                dihedralAngleCreator.addAtom(pointedAtoms[0]);
+                if (!dihedralAngleCreator.collected.includes(pointedAtoms[0])) {
+                    dihedralAngleCreator.addAtom(pointedAtoms[0]);
+                }
             }
         }
 
@@ -1374,9 +1376,9 @@ class MolviEngine {
             ccluster.atoms.forEach(function (atom) {
                 if (atom === originId) {
                     cluster = ccluster;
-                    ox = atom.x;
-                    oy = atom.y;
-                    oz = atom.z;
+                    ox = app.atoms[atom].x;
+                    oy = app.atoms[atom].y;
+                    oz = app.atoms[atom].z;
                 }
             });
         });
@@ -1399,7 +1401,7 @@ class MolviEngine {
                     "z": app.atoms[atom].z
                 });
             });
-            var ax = parseFloat($("#tr_dx").val()),
+            let ax = parseFloat($("#tr_dx").val()),
                 ay = parseFloat($("#tr_dy").val()),
                 az = parseFloat($("#tr_dz").val()),
                 atoms_json = JSON.stringify(atoms);
@@ -1418,11 +1420,14 @@ class MolviEngine {
                 },
                 success(data) {
                     console.log(cluster);
-                    var ans = JSON.parse(data);
+                    let ans = JSON.parse(data);
                     ans.forEach(function (a, indx) {
-                        cluster.atomList[indx].x = a[0];
+                        /*cluster.atomList[indx].x = a[0];
                         cluster.atomList[indx].y = a[1];
-                        cluster.atomList[indx].z = a[2];
+                        cluster.atomList[indx].z = a[2];*/
+                        app.atoms[cluster.atoms[indx]].x = a[0];
+                        app.atoms[cluster.atoms[indx]].y = a[1];
+                        app.atoms[cluster.atoms[indx]].z = a[2];
                     });
                     engine.build3DFromDoc();
                     engine.buildHtmlFromDoc();
@@ -2046,6 +2051,24 @@ let dihedralAngleCreator = {
 
         if (this.collected.length >= 4) {
             console.log(this.collected);
+
+            $.ajax({
+                url: "/molvi/dihedral-angle-create",
+                method: "POST",
+                data: {
+                    "atoms": JSON.stringify(this.collected),
+                    "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val()
+                },
+                success(data) {
+                    console.log(data);
+                },
+                error(data) {
+                    console.warn(data.responseText);
+                }
+            });
+
+            this.collected = [];
+            this.stop()
         }
     },
     start: function () {

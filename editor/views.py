@@ -463,6 +463,47 @@ def rotate_cluster(request):
 	return HttpResponse(ans)
 
 
+def dihedral_angle_create(request):
+	if "atoms" not in request.POST:
+		return HttpResponse("there is no atoms parameter in POST", status=500)
+
+	atoms = json.loads(request.POST["atoms"])
+	if not isinstance(atoms, list):
+		return HttpResponse("atoms must be valid list of items", status=500)
+
+	if len(atoms) != 4:
+		return HttpResponse("please specify exactly 4 atoms", status=500)
+
+	# двугранный угол состоит из 4 атомов. Между ними обязаны быть связи
+	try:
+		adoc = Document.objects.get(is_active=True)
+		doc_atoms = [Atom.objects.get(document=adoc, documentindex=atomid) for atomid in atoms]
+
+		if len(doc_atoms) != 4:
+			return HttpResponse("one or more atoms not found {atoms}", status=500)
+
+		# массив из массивов по 1 или 0 элементу
+		links_temp = [list(Link.objects.filter(
+			atom1=doc_atoms[i], atom2=doc_atoms[i+1])) + list(Link.objects.filter(
+				atom1=doc_atoms[i+1], atom2=doc_atoms[i])) for i in range(3)]
+
+		links = [link[0] for link in links_temp if len(link)>0]
+
+		if len(links) != 3:
+			return HttpResponse("Check if all atoms linked correctly with links")
+
+		name = f"{doc_atoms[0].documentindex}-{doc_atoms[1].documentindex}-{doc_atoms[2].documentindex}"
+		newda = DihedralAngle.objects.create(
+			document=adoc, name=name)
+		link1 = DihedralAngleLink.objects.create()
+
+
+	except Atom.DoesNotExist:
+		return HttpResponse(f"One or more atoms not founded: {atoms}")
+
+	return HttpResponse("OK")
+
+
 def change_dihedral_angle(request):
 	# изменение двугранного угла
 	if "id" not in request.POST:
@@ -471,6 +512,7 @@ def change_dihedral_angle(request):
 	aid = int(request.POST["id"])
 	angle = DihedralAngle.objects.get(id=aid)
 	links = DihedralAngleLink.objects.filter(angle=angle)
+	return HttpResponse("not implemented")
 
 
 def valence_angle_change(request):
