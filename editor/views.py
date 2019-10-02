@@ -487,16 +487,22 @@ def dihedral_angle_create(request):
 			atom1=doc_atoms[i], atom2=doc_atoms[i+1])) + list(Link.objects.filter(
 				atom1=doc_atoms[i+1], atom2=doc_atoms[i])) for i in range(3)]
 
-		links = [link[0] for link in links_temp if len(link)>0]
+		links = [link[0] for link in links_temp if len(link) > 0]
 
 		if len(links) != 3:
 			return HttpResponse("Check if all atoms linked correctly with links")
 
-		name = f"{doc_atoms[0].documentindex}-{doc_atoms[1].documentindex}-{doc_atoms[2].documentindex}"
+		name = f"{doc_atoms[0].name}{doc_atoms[0].documentindex}"
+		name += f"-{doc_atoms[1].name}{doc_atoms[1].documentindex}"
+		name += f"-{doc_atoms[2].name}{doc_atoms[2].documentindex}"
 		newda = DihedralAngle.objects.create(
 			document=adoc, name=name)
-		link1 = DihedralAngleLink.objects.create()
 
+		for link in links:
+			DihedralAngleLink.objects.create(
+				angle=newda,
+				link=link
+			)
 
 	except Atom.DoesNotExist:
 		return HttpResponse(f"One or more atoms not founded: {atoms}")
@@ -728,11 +734,12 @@ def get_active_data(request):
 	da_from_doc = DihedralAngle.objects.filter(document=sdoc)
 	for angle in da_from_doc:
 		myl = DihedralAngleLink.objects.filter(angle=angle)
-		if len(myl) == 4:
-			buf = list()
+		if len(myl) == 3:
+			buf = list()  # список атомов
 			for m in myl:
-				if m.id not in buf:
-					buf.append(m.id)
+				for at in [m.link.atom1, m.link.atom2]:
+					if at.id not in buf:
+						buf.append(m.id)
 
 			dihedral_angles.append({
 				"id": angle.id,

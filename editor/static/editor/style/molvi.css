@@ -479,7 +479,8 @@
   width: 600px;
   margin-left: -300px;
   margin-top: 200px;
-  padding: 30px; }
+  padding: 30px;
+  display: none; }
   #optimize-links .optimise-option {
     padding: 3px; }
   #optimize-links .selector {

@@ -25,71 +25,12 @@ let app = new Vue({
     delimiters: ["[[", "]]"],
     data: {
         optimisationLoading: true,
-        optimisers: [
-            {
-                id: 1,
-                selected: true,
-                label: "C-C [10-12]"
-            },
-            {
-                id: 2,
-                selected: true,
-                label: "C-C [10-12]"
-            },
-            {
-                id: 3,
-                selected: false,
-                label: "C-C [10-12]"
-            },
-            {
-                id: 4,
-                selected: true,
-                label: "C-C [10-12]"
-            },
-            {
-                id: 5,
-                selected: false,
-                label: "C-C [10-12]"
-            },
-        ],
-        atoms: {
-            10: {
-                name: "no name",
-                x: 0,
-                y: 0,
-                z: 0,
-                color: "#DEADDD"
-            },
-            11: {
-                name: "no name",
-                x: 0,
-                y: 0,
-                z: 0,
-                color: "#DEADDD"
-            }
-        },
-        links: [{
-            20: {
-                atom1: 10,
-                atom2: 11
-            }
-        }],
-        clusters: [{
-            caption: "Kitty Cluster",
-            atoms: [10, 11]
-        }],
-        valenceAngles: [
-            {
-                id: '0',
-                name: "my title",
-                value: "776",
-                atom1: 101,
-                atom2: 102,
-                atom3: 103,
-                link1: 201,
-                link2: 202
-            }
-        ],
+        optimisers: [],
+        atoms: {},
+        links: [],
+        clusters: [{}],
+        valenceAngles: [],
+        dihedralAngles: [],  // список двугранных углов
         documentName: "new document",
         selectedAtomIds: [],
         selectedLinkIds: []
@@ -259,7 +200,7 @@ let app = new Vue({
     },
     mounted: ()=>{
         this.requestAnimationFrame(()=>{
-            app.openOptimisation();
+            //app.openOptimisation();
         });
 
     }
@@ -538,7 +479,7 @@ class MolviEngine {
         var ahtml = "",
             mhtml,
             buf,
-            html = "";        
+            html = "";
         doc.clusters.forEach(function(cluster) {
             ahtml = "";
             cluster.atomList.forEach(function (atom) {
@@ -555,7 +496,7 @@ class MolviEngine {
             mhtml = mhtml.replace(/\[\[id]]/g, cluster.id);
             html += mhtml;
         });
-        
+
         let linkshtml = "",
             newHtml = "",
             chunk = Chunks.link;
@@ -728,7 +669,7 @@ class MolviEngine {
     }
 
     /**
-     * Показать сообщение для пользователя 
+     * Показать сообщение для пользователя
      * (вызов без аргументов спрячет поле сообщений)
      */
     userMessage(message) {
@@ -872,7 +813,7 @@ class MolviEngine {
         } else if(engine.linkCreationSource.length == 1) {
             engine.userMessage("Выберите атом #2");
         }
-    
+
         //ids содержит что-то
         if (this.linkCreationSource.length == 2) {
             engine.userMessage();
@@ -908,7 +849,7 @@ class MolviEngine {
 //            engine.build3DFromDoc();
         }
 
-        
+
     }
 
     /**
@@ -930,7 +871,7 @@ class MolviEngine {
         $(".selectedIcon").hide();
         $(".unselectedIcon").show();
         engine.controlMode = modeName;
-    
+
         if(modeName === 'line'){
             $("#icon_modeLineUnselected").hide();
             $("#icon_modeLineSelected").show();
@@ -1133,6 +1074,8 @@ class MolviEngine {
 
         });
         app.valenceAngles = docData["valence_angles"];
+
+        //app.dihedralAngles = docData["dihedral_angles"]
 
         engine.buildHtmlFromDoc();
         engine.build3DFromDoc();
@@ -1609,18 +1552,18 @@ class MolviView {
         //camera = new THREE.OrthographicCamera(-10, 10, -10, 10, 0.1, 100)
         view.camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
         view.camera.position.z = 3;
-    
+
         view.controls = new THREE.OrbitControls(this.camera);
         view.raycaster = new THREE.Raycaster();
         view.mousePosition = new THREE.Vector2();
-    
+
 
         view.renderer.setClearColor(0xff0000, 0);
         view.renderer.setSize(width, height);
 
         view.scene.background = new THREE.Color(0x000000);
         view.addLight();
-    
+
         /*var geometry = new THREE.SphereGeometry( 1, this.spehereDetalisation, this.spehereDetalisation),
             material = new THREE.MeshPhongMaterial({
             //wireframe: true,
@@ -1650,7 +1593,7 @@ class MolviView {
     buildScene() {
         view.scene.background = new THREE.Color(0x000000);
         view.scene.children.splice(0, this.scene.children.length);
-        
+
         //добавить свет
         let light1 = new THREE.DirectionalLight(0xffffff, 0.3),
             light2 = new THREE.AmbientLight(0xffffff, 0.5);
@@ -1658,20 +1601,20 @@ class MolviView {
         view.lightGroup.add(light1);
         view.lightGroup.add(light2);
         view.scene.add(this.lightGroup);
-    
+
         //добавить вспомогательные элементы
         let helper = new THREE.AxesHelper(22),
             grid = new THREE.GridHelper(10, 10);
         view.helpGroup.add(grid);
         view.helpGroup.add(helper);
         view.scene.add(view.helpGroup);
-    
+
         //добавить хранилище под молекулы
         view.scene.add(view.atomGroup);
-    
+
         //добавить связи между молекулами
         view.scene.add(this.linkGroup);
-    
+
         //добавить объекты для выделения
         view.scene.add(this.outlinesGroup);
     }
@@ -2034,7 +1977,7 @@ let htmlLabels = {
             }
         }
     }
-    
+
 };
 
 function closeControls() {

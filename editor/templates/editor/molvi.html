@@ -118,7 +118,7 @@
                                     <span>[[cluster.caption]] </span><div style="text-decoration: underline" class='move' @click='openMoveControls([[id]])'>переместить</div>
                                 </div>
                                 <div class="moleculaData">
-                                    <div v-for="atom_id in cluster.atoms" class="atomView" onclick="engine.selectAtomById([[id]])" id="atomView_[[id]]">
+                                    <div v-for="atom_id in cluster.atoms" class="atomView" @click="engine.selectAtomById([[id]])" :id="'atomView_' + id">
                                         <div class="name t1-5">[[atoms[atom_id].name]]</div>
                                         <div class="id t1-5">[[atoms[atom_id].documentindex]]</div>
                                         <div class="devider"></div>
