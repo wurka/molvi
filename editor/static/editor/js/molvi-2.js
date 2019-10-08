@@ -24,6 +24,7 @@ let app = new Vue({
     el: '#app',
     delimiters: ["[[", "]]"],
     data: {
+        controlMode: 'idle',  // активный режим (idle, 'dihedral creation')
         optimisationLoading: true,
         optimisers: [],
         atoms: {},
@@ -200,6 +201,39 @@ let app = new Vue({
                 },
                 success(data){console.log(data); app.dihedralAngles=data},
                 error(data){console.error(data.responseText);}
+            })
+        },
+        optimizeDihedralAngle(id){
+            $.ajax({
+                url: "/molvi/dihedral-angle-optimize",
+                method: "POST",
+                data: {
+                    "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val(),
+                    "id": id
+                },
+                success(data) {
+                    console.log(data);
+                },
+                error(data) {
+                    document.body.innerHTML = data.responseText;
+                }
+            })
+        },
+        saveAtomsToActive() {
+            // сохранить текущую конфигурацию атомов в активном документе
+            $.ajax({
+                url: "/molvi/save-to-active",
+                method: "POST",
+                data: {
+                    "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val(),
+                    "atoms": JSON.stringify(app.atoms)
+                },
+                success(data) {
+                    console.log(data);
+                },
+                error(data) {
+                    document.body.innerHTML = data.responseText;
+                }
             })
         }
     },
@@ -1387,6 +1421,7 @@ class MolviEngine {
                     engine.build3DFromDoc();
                     engine.buildHtmlFromDoc();
                     engine.closeRotationHtml();
+                    app.saveAtomsToActive();
                 }
 
             });
@@ -2036,9 +2071,11 @@ let dihedralAngleCreator = {
         $(".dihedralAngles .messages").show();
         $(".dihedralAngles .messages .text").html("Выбрано атомов: 0/4");
         engine.controlMode = "dihedral creation";
+        app.controlMode = 'dihedral creation';
     },
     stop: function () {
         $(".dihedralAngles .messages").hide();
+        app.controlMode = 'idle';
     }
 };
 

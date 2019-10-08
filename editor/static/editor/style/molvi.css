@@ -446,6 +446,10 @@
 
 .dihedralAngles {
   position: relative; }
+  .dihedralAngles .noDihedralAngles {
+    color: gray;
+    text-align: center;
+    margin: 10px 3px; }
   .dihedralAngles .title {
     font-size: 1.1em;
     margin: 10px 0 0 10px; }
@@ -453,6 +457,7 @@
     text-align: center;
     margin: 10px; }
   .dihedralAngles .messages {
+    display: none;
     position: absolute;
     background: white;
     z-index: 1;
@@ -469,13 +474,13 @@
     display: flex; }
     .dihedralAngles .dihedralAngle div:first-child {
       flex-grow: 1; }
-    .dihedralAngles .dihedralAngle div:nth-child(2) {
+    .dihedralAngles .dihedralAngle div:nth-child(2), .dihedralAngles .dihedralAngle div:nth-child(3) {
       width: 22px;
       height: 22px;
       border: 1px solid transparent; }
-      .dihedralAngles .dihedralAngle div:nth-child(2):hover {
+      .dihedralAngles .dihedralAngle div:nth-child(2):hover, .dihedralAngles .dihedralAngle div:nth-child(3):hover {
         background: lightgray; }
-      .dihedralAngles .dihedralAngle div:nth-child(2):active {
+      .dihedralAngles .dihedralAngle div:nth-child(2):active, .dihedralAngles .dihedralAngle div:nth-child(3):active {
         border-color: black; }
 
 #optimize-button:hover {

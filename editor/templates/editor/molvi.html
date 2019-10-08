@@ -151,22 +151,23 @@
                             </div>
                         </div>
                         <div class="dihedralAngles viewPanel" id="panelDihedralAngles">
+                            <div class="noDihedralAngles" v-if="dihedralAngles.length==0">
+                                Двугранных углов<br>ещё не создано
+                            </div>
                             <div v-for="da in dihedralAngles" class="dihedralAngle">
                                 <div>[[ da.name ]]</div>
                                 <div @click="deleteDihedralAngle(da.id)">&times;</div>
-                                <div>2</div>
+                                <div @click="optimizeDihedralAngle(da.id)">opt</div>
                             </div>
-                            <div class="flat-button new-dihedral-angle-button" onclick="dihedralAngleCreator.start()">Создать</div>
+                            <div class="flat-button new-dihedral-angle-button"
+                                 v-if="controlMode != 'dihedral creation'"
+                                 onclick="dihedralAngleCreator.start()">Создать</div>
                             <div class="messages">
                                 <div class="title">Создание двугранного угла:</div>
                                 <div class="text">...</div>
                                 <div class="buttons">
                                     <div class="flat-button" onclick="dihedralAngleCreator.stop()">Отмена</div>
                                 </div>
-                            </div>
-
-                            <div class="dihedralAnglesList">
-                                empy
                             </div>
                         </div>
                         <div class="valenceAngle viewPanel" id="panelValenceAngles">

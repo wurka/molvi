@@ -16,7 +16,8 @@ from pyquaternion import Quaternion as Quater
 from re import sub as resub
 import numpy as np
 import pickle
-from sympy import Line
+from sympy import Line, Point, Plane
+from math import degrees
 
 
 class MolFileReadingException(Exception):
@@ -568,6 +569,52 @@ def dihedral_angle_delete(request):
 	return JsonResponse(dihedrals, safe=False)
 
 
+@post_with_parameters("id")
+def dihedral_angle_optimize(request):
+	# определение энергии двугранного угла
+	# двугранный угол состоит из 4 атомов: 1-2-3-4. 1 и 4 - крайние, 2 и 3 - внутренниие атомы
+	daid = request.POST["id"]
+	try:
+		dangle = DihedralAngle.objects.get(id=daid)
+	except DihedralAngle.DoesNotExist:
+		return HttpResponse(f"there is no dihedral angle with id={daid}", status=500)
+
+	links = DihedralAngleLink.objects.filter(angle=dangle)
+	extrems = list()  # список "крайних" атомов
+	inners = list()  # список "внутренних" атомов
+	for link in links:
+		for a in [link.link.atom1, link.link.atom2]:
+			if a not in extrems:
+				extrems.append(a)
+			else:  # атом встрелся второй раз, значит он внутренний
+				extrems.remove(a)
+				inners.append(a)
+	# в двугранном угле должны быть только 2 крайних атома и 2 внутренних
+	if len(extrems) != 2 or len(inners) != 2:
+		return HttpResponse("wrong configuration of dihedral link", status=500)
+
+	axis = Line((inners[0].x, inners[0].y, inners[0].z), (inners[1].x, inners[1].y, inners[1].z))
+	# плоскости двугранного yгла
+	try:
+		plane1 = Plane(
+			(extrems[0].x, extrems[0].y, extrems[0].z),
+			(inners[0].x, inners[0].y, inners[0].z),
+			(inners[1].x, inners[1].y, inners[1].z),
+		)
+		plane2 = Plane(
+			(extrems[1].x, extrems[1].y, extrems[1].z),
+			(inners[0].x, inners[0].y, inners[0].z),
+			(inners[1].x, inners[1].y, inners[1].z),
+		)
+	except ValueError:
+		return HttpResponse("Wrong dihedral angle configuration: unable to build planes. Some atoms in line?")
+
+	angle_value = plane1.angle_between(plane2)
+	angle_value_degrees = degrees(angle_value)
+
+	return HttpResponse("OK")
+
+
 def valence_angle_change(request):
 	# изменение валентного угла
 	if "id" not in request.POST:
@@ -840,6 +887,38 @@ def get_active_data(request):
 	return HttpResponse(json.dumps(adoc))
 
 
+@post_with_parameters()
+def save_to_active(request):
+	"""
+	сохранить данные в активный документ
+	:param request: возможны следующие параметры:
+	atoms - список атомов
+	:return: OK if all OK
+	"""
+	try:
+		adoc = Document.objects.get(is_active=True)
+	except Document.DoesNotExist:
+		return HttpResponse("there is no active document", status=500)
+	if "atoms" in request.POST:
+		req_atoms = json.loads(request.POST["atoms"])
+		if type(req_atoms) is not dict:
+			return HttpResponse(f"atoms must be dictionary not {type(request.POST['atoms'])}")
+
+		try:
+			for key in req_atoms.keys():
+				req_atom = req_atoms[key]
+				doc_atom = Atom.objects.get(document=adoc, documentindex=req_atom['documentindex'])
+				doc_atom.x = req_atom["x"]
+				doc_atom.y = req_atom["y"]
+				doc_atom.z = req_atom["z"]
+				doc_atom.save()
+		except Atom.DoesNotExist:
+			return HttpResponse(f"there is no atom with documentindex={req_atom['documentindex']}", status=500)
+
+
+	return HttpResponse("OK")
+
+
 def open_mol_file(request):
 	if "filename" not in request.GET:
 		return HttpResponse("there si no parameter: filename", status=500)
@@ -1053,38 +1132,10 @@ def edit_link_set_length(request):
 			atom.y += movey
 			atom.z += movez
 		# else:
-		# 	atom.x -= movex
-		# 	atom.y -= movey
-		#	atom.z -= movez
+			# atom.x -= movex
+			# atom.y -= movey
+			# atom.z -= movez
+
 		atom.save()
-
-	return HttpResponse("OK")
-
-
-@get_with_parameters("id")
-def get_energy_ver1(request):
-	# определение энергии двугранного угла
-	# двугранный угол состоит из 4 атомов: 1-2-3-4. 1 и 4 - крайние, 2 и 3 - внутренниие атомы
-	daid = request.GET["id"]
-	try:
-		dangle = DihedralAngle.objects.get(id=daid)
-	except DihedralAngle.DoesNotExist:
-		return HttpResponse(f"there is no dihedral angle with id={daid}", status=500)
-
-	links = DihedralAngleLink.objects.filter(angle=dangle)
-	extrems = list()  # список "крайних" атомов
-	inners = list()  # список "внутренних" атомов
-	for link in links:
-		for a in [link.link.atom1, link.link.atom2]:
-			if a not in extrems:
-				extrems.append(a)
-			else:  # атом встрелся второй раз, значит он внутренний
-				extrems.remove(a)
-				inners.append(a)
-	# в двугранном угле должны быть только 2 крайних атома и 2 внутренних
-	if len(extrems) != 2 or len(inners) != 2:
-		return HttpResponse("wrong configuration of dihedral link", status=500)
-
-
 
 	return HttpResponse("OK")

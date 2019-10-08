@@ -481,6 +481,10 @@
 
 .dihedralAngles
   position: relative
+  .noDihedralAngles
+    color: gray
+    text-align: center
+    margin: 10px 3px
   .title
     font-size: 1.1em
     margin: 10px 0 0 10px
@@ -488,6 +492,7 @@
     text-align: center
     margin: 10px
   .messages
+    display: none
     position: absolute
     background: white
     z-index: 1
@@ -505,7 +510,7 @@
     display: flex
     div:first-child
       flex-grow: 1
-    div:nth-child(2)
+    div:nth-child(2), div:nth-child(3)
       width: 22px
       height: 22px
       border: 1px solid transparent

@@ -23,6 +23,7 @@ urlpatterns = [
 	path('server/open-file-dialog', views.open_file_dialog),
 	path('get-last-mol-file', views.get_last_mol_file),
 	path('save-document', views.save_document),
+	path('save-to-active', views.save_to_active),
 	path('get-documents', views.get_documents),
 	path('get-mol-files', views.get_mol_files),
 	path('get-document', views.get_document),
@@ -43,6 +44,7 @@ urlpatterns = [
 
 	path("dihedral-angle-create", views.dihedral_angle_create),  # создать двугранный угол
 	path("dihedral-angle-delete", views.dihedral_angle_delete),  # удалить двугранный угол
+	path("dihedral-angle-optimize", views.dihedral_angle_optimize),  # оптимизировать двугранный угол
 
 	path('debug-optimizer', optimizer.debug),
 	path('optimize', optimizer.optimize),  # оптимизировать молекулу по энергии
