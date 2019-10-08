@@ -138,7 +138,8 @@
                                             <span class="name">[[link.name]]</span>
                                         </div>
                                         <div class="change-length text t1-5" @click="openChangeLinkLengthPanel(id, link.value)"><img src="/static/editor/images/change-length.svg" alt="cl.png"></div>
-                                        <div class="change-lengthcell text t1-5" onclick="openLinkRotationPanel([[id]], [[link.from]], [[link.to]])"><img src="/static/editor/images/spin.svg" alt="lr.png"></div>
+                                        <div class="change-lengthcell text t1-5"
+                                             :onclick="'openLinkRotationPanel('+id+ ',' + links[id].atom1 +','+ links[id].atom2 + ')'"><img src="/static/editor/images/spin.svg" alt="lr.png"></div>
                                         <div class="deleteLink text t1-5" title="delete link" @click="deleteLink(id)">
                                             <img src="/static/editor/images/cross-20.png" alt="cross.png">
                                         </div>
@@ -150,6 +151,11 @@
                             </div>
                         </div>
                         <div class="dihedralAngles viewPanel" id="panelDihedralAngles">
+                            <div v-for="da in dihedralAngles" class="dihedralAngle">
+                                <div>[[ da.name ]]</div>
+                                <div @click="deleteDihedralAngle(da.id)">&times;</div>
+                                <div>2</div>
+                            </div>
                             <div class="flat-button new-dihedral-angle-button" onclick="dihedralAngleCreator.start()">Создать</div>
                             <div class="messages">
                                 <div class="title">Создание двугранного угла:</div>

@@ -464,6 +464,19 @@
   .dihedralAngles .buttons .flat-button {
     width: 130px;
     margin-left: 10px; }
+  .dihedralAngles .dihedralAngle {
+    cursor: default;
+    display: flex; }
+    .dihedralAngles .dihedralAngle div:first-child {
+      flex-grow: 1; }
+    .dihedralAngles .dihedralAngle div:nth-child(2) {
+      width: 22px;
+      height: 22px;
+      border: 1px solid transparent; }
+      .dihedralAngles .dihedralAngle div:nth-child(2):hover {
+        background: lightgray; }
+      .dihedralAngles .dihedralAngle div:nth-child(2):active {
+        border-color: black; }
 
 #optimize-button:hover {
   background: pink;

@@ -188,6 +188,19 @@ let app = new Vue({
                     console.warn(data.responseText);
                 }
             });
+        },
+        deleteDihedralAngle(id){
+            console.log('deleteDihedralAngle(' + id + ')');
+            $.ajax({
+                url: "/molvi/dihedral-angle-delete",
+                method: "POST",
+                data: {
+                    "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val(),
+                    "id": id
+                },
+                success(data){console.log(data); app.dihedralAngles=data},
+                error(data){console.error(data.responseText);}
+            })
         }
     },
     watch: {
@@ -1017,15 +1030,14 @@ class MolviEngine {
         app.links = docData.links;
         app.valenceAngles = docData["valence_angles"];
         console.log(docData);
-
-        return;
-
         doc.documentName = docData["name"];
 
         let atar = JSON.parse(jsonString);
         let satoms = docData["atoms"],
             atomlist = {};
 
+        // legacy
+        /*
         satoms.forEach(function(item, indx){
             let x = parseFloat(item['x']),
                 y = parseFloat(item['y']),
@@ -1072,10 +1084,10 @@ class MolviEngine {
 
             doc.valenceAngles.push(newVA);
 
-        });
+        });*/
         app.valenceAngles = docData["valence_angles"];
 
-        //app.dihedralAngles = docData["dihedral_angles"]
+        app.dihedralAngles = docData["dihedral_angles"];
 
         engine.buildHtmlFromDoc();
         engine.build3DFromDoc();
@@ -1807,6 +1819,8 @@ function changeLinkLength() {
 }
 
 function openLinkRotationPanel(id, from, to) {
+    console.log("OpenLinkRotationPanel");
+    console.log(id, from, to);
     $(".viewPanel").hide();
     $("#linkRotationPanel").fadeIn(500);
 
@@ -2004,8 +2018,10 @@ let dihedralAngleCreator = {
                 },
                 success(data) {
                     console.log(data);
+                    app.dihedralAngles = data;
                 },
                 error(data) {
+                    alert("Не удалось создать двугранный угол: " + data.responseText);
                     console.warn(data.responseText);
                 }
             });
@@ -2053,7 +2069,7 @@ $(document).ready(function(){
     engine.LoadAtomDataFromServer(true);
 
 
-    selectPanel("Atoms");
+    selectPanel("DihedralAngles");
 
     console.log(htmlLabels.createLabel());
 

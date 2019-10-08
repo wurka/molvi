@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 from django.shortcuts import render
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, JsonResponse
 from .views_utils import *
 from .mathutils import rotate_by_deg
 from .models import Document, Link, Atom, Cluster, ClusterAtom, DihedralAngle, DihedralAngleLink
@@ -16,6 +16,7 @@ from pyquaternion import Quaternion as Quater
 from re import sub as resub
 import numpy as np
 import pickle
+from sympy import Line
 
 
 class MolFileReadingException(Exception):
@@ -23,6 +24,32 @@ class MolFileReadingException(Exception):
 
 	def __init__(self, message):
 		self.message = message
+
+
+def post_with_parameters(*args):
+	def decor(method):
+		def response(request):
+			if request.method != "POST":
+				return HttpResponse(f"please use POST request, not {request.method}", status=500)
+			for param in args:
+				if param not in request.POST:
+					return HttpResponse(f"there is no parameter {param}", status=500)
+			return method(request)
+		return response
+	return decor
+
+
+def get_with_parameters(*args):
+	def decor(method):
+		def response(request):
+			if request.method != "GET":
+				return HttpResponse(f"please use GET request, not {request.method}", status=500)
+			for param in args:
+				if param not in request.GET:
+					return HttpResponse(f"there is no parameter {param}", status=500)
+			return method(request)
+		return response
+	return decor
 
 
 def angle_from_atoms(atom1, atom2, atom3):
@@ -464,6 +491,8 @@ def rotate_cluster(request):
 
 
 def dihedral_angle_create(request):
+	# создание двугранного угла
+
 	if "atoms" not in request.POST:
 		return HttpResponse("there is no atoms parameter in POST", status=500)
 
@@ -490,7 +519,7 @@ def dihedral_angle_create(request):
 		links = [link[0] for link in links_temp if len(link) > 0]
 
 		if len(links) != 3:
-			return HttpResponse("Check if all atoms linked correctly with links")
+			return HttpResponse("Check if all atoms linked correctly with links", status=500)
 
 		name = f"{doc_atoms[0].name}{doc_atoms[0].documentindex}"
 		name += f"-{doc_atoms[1].name}{doc_atoms[1].documentindex}"
@@ -507,10 +536,11 @@ def dihedral_angle_create(request):
 	except Atom.DoesNotExist:
 		return HttpResponse(f"One or more atoms not founded: {atoms}")
 
-	return HttpResponse("OK")
+	dihedrals = get_from_doc_dihedral_angles(document=adoc)
+	return JsonResponse(dihedrals, safe=False)
 
 
-def change_dihedral_angle(request):
+def dihedral_angle_change(request):
 	# изменение двугранного угла
 	if "id" not in request.POST:
 		return HttpResponse("there is no parameter: id", status=500)
@@ -519,6 +549,23 @@ def change_dihedral_angle(request):
 	angle = DihedralAngle.objects.get(id=aid)
 	links = DihedralAngleLink.objects.filter(angle=angle)
 	return HttpResponse("not implemented")
+
+
+@post_with_parameters("id")
+def dihedral_angle_delete(request):
+	# удаление двугранного угла
+	adoc = Document.objects.get(is_active=True)
+
+	try:
+		todel = DihedralAngle.objects.get(id=int(request.POST['id']))
+		todel.delete()
+	except DihedralAngle.DoesNotExist:
+		return HttpResponse(f"there is no dihedral angle with id={id}", status=500)
+	except ValueError:
+		return HttpResponse(f"id must be valid integer, not {id}")
+
+	dihedrals = get_from_doc_dihedral_angles(adoc)
+	return JsonResponse(dihedrals, safe=False)
 
 
 def valence_angle_change(request):
@@ -693,6 +740,29 @@ def create_document(request):
 	return HttpResponse(new_document.id)
 
 
+def get_from_doc_dihedral_angles(document):
+	dihedral_angles = list()
+	da_from_doc = DihedralAngle.objects.filter(document=document)
+	for angle in da_from_doc:
+		myl = DihedralAngleLink.objects.filter(angle=angle)
+		if len(myl) == 3:
+			buf = list()  # список атомов
+			for m in myl:
+				for at in [m.link.atom1, m.link.atom2]:
+					if at.id not in buf:
+						buf.append(at.id)
+
+			dihedral_angles.append({
+				"id": angle.id,
+				"name": angle.name,
+				"atom1": buf[0],
+				"atom2": buf[1],
+				"atom3": buf[2],
+				"atom4": buf[3]
+			})
+	return dihedral_angles
+
+
 # получить содержание активного документа
 def get_active_data(request):
 	try:
@@ -730,25 +800,7 @@ def get_active_data(request):
 		} for a in bdatoms}
 
 	# двугранные углы
-	dihedral_angles = list()
-	da_from_doc = DihedralAngle.objects.filter(document=sdoc)
-	for angle in da_from_doc:
-		myl = DihedralAngleLink.objects.filter(angle=angle)
-		if len(myl) == 3:
-			buf = list()  # список атомов
-			for m in myl:
-				for at in [m.link.atom1, m.link.atom2]:
-					if at.id not in buf:
-						buf.append(m.id)
-
-			dihedral_angles.append({
-				"id": angle.id,
-				"name": angle.name,
-				"atom1": buf[0],
-				"atom2": buf[1],
-				"atom3": buf[2],
-				"atom4": buf[3]
-			})
+	dihedral_angles = get_from_doc_dihedral_angles(document=sdoc)
 
 	# валентные углы
 	valence_angles = dict()
@@ -1005,5 +1057,34 @@ def edit_link_set_length(request):
 		# 	atom.y -= movey
 		#	atom.z -= movez
 		atom.save()
+
+	return HttpResponse("OK")
+
+
+@get_with_parameters("id")
+def get_energy_ver1(request):
+	# определение энергии двугранного угла
+	# двугранный угол состоит из 4 атомов: 1-2-3-4. 1 и 4 - крайние, 2 и 3 - внутренниие атомы
+	daid = request.GET["id"]
+	try:
+		dangle = DihedralAngle.objects.get(id=daid)
+	except DihedralAngle.DoesNotExist:
+		return HttpResponse(f"there is no dihedral angle with id={daid}", status=500)
+
+	links = DihedralAngleLink.objects.filter(angle=dangle)
+	extrems = list()  # список "крайних" атомов
+	inners = list()  # список "внутренних" атомов
+	for link in links:
+		for a in [link.link.atom1, link.link.atom2]:
+			if a not in extrems:
+				extrems.append(a)
+			else:  # атом встрелся второй раз, значит он внутренний
+				extrems.remove(a)
+				inners.append(a)
+	# в двугранном угле должны быть только 2 крайних атома и 2 внутренних
+	if len(extrems) != 2 or len(inners) != 2:
+		return HttpResponse("wrong configuration of dihedral link", status=500)
+
+
 
 	return HttpResponse("OK")

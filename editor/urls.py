@@ -42,6 +42,7 @@ urlpatterns = [
 	path('valence-angles-change', views.valence_angle_change),  # изменить валентный угол
 
 	path("dihedral-angle-create", views.dihedral_angle_create),  # создать двугранный угол
+	path("dihedral-angle-delete", views.dihedral_angle_delete),  # удалить двугранный угол
 
 	path('debug-optimizer', optimizer.debug),
 	path('optimize', optimizer.optimize),  # оптимизировать молекулу по энергии
