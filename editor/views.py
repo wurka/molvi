@@ -16,8 +16,8 @@ from pyquaternion import Quaternion as Quater
 from re import sub as resub
 import numpy as np
 import pickle
-from sympy import Line, Point, Plane
-from math import degrees
+from sympy import Line3D, Point3D, Plane
+from math import degrees, cos
 
 
 class MolFileReadingException(Exception):
@@ -593,18 +593,20 @@ def dihedral_angle_optimize(request):
 	if len(extrems) != 2 or len(inners) != 2:
 		return HttpResponse("wrong configuration of dihedral link", status=500)
 
-	axis = Line((inners[0].x, inners[0].y, inners[0].z), (inners[1].x, inners[1].y, inners[1].z))
+	point1 = Point3D(inners[0].x, inners[0].y, inners[0].z, evaluate=False)
+	point2 = Point3D(inners[1].x, inners[1].y, inners[1].z, evaluate=False)
+	axis = Line3D(point1, point2)
 	# плоскости двугранного yгла
 	try:
 		plane1 = Plane(
-			(extrems[0].x, extrems[0].y, extrems[0].z),
-			(inners[0].x, inners[0].y, inners[0].z),
-			(inners[1].x, inners[1].y, inners[1].z),
+			Point3D(extrems[0].x, extrems[0].y, extrems[0].z, evaluate=False),
+			Point3D(inners[0].x, inners[0].y, inners[0].z, evaluate=False),
+			Point3D(inners[1].x, inners[1].y, inners[1].z, evaluate=False),
 		)
 		plane2 = Plane(
-			(extrems[1].x, extrems[1].y, extrems[1].z),
-			(inners[0].x, inners[0].y, inners[0].z),
-			(inners[1].x, inners[1].y, inners[1].z),
+			Point3D(extrems[1].x, extrems[1].y, extrems[1].z, evaluate=False),
+			Point3D(inners[0].x, inners[0].y, inners[0].z, evaluate=False),
+			Point3D(inners[1].x, inners[1].y, inners[1].z, evaluate=False),
 		)
 	except ValueError:
 		return HttpResponse("Wrong dihedral angle configuration: unable to build planes. Some atoms in line?")
@@ -612,7 +614,16 @@ def dihedral_angle_optimize(request):
 	angle_value = plane1.angle_between(plane2)
 	angle_value_degrees = degrees(angle_value)
 
-	return HttpResponse("OK")
+	point3 = Point3D(extrems[0].x, extrems[0].y, extrems[0].z, evaluate=False)
+	point4 = Point3D(extrems[1].x, extrems[1].y, extrems[1].z, evaluate=False)
+	j1 = extrems[0].mass * axis.distance(point3)**2.0
+	j2 = extrems[1].mass * axis.distance(point4)**2.0
+
+	phi_0 = 0
+	a = j1 + j2
+	energy = a*cos(angle_value - phi_0)
+
+	return HttpResponse(f"energy: {energy}")
 
 
 def valence_angle_change(request):
