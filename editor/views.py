@@ -18,6 +18,7 @@ import numpy as np
 import pickle
 from sympy import Line3D, Point3D, Plane
 from math import degrees, cos
+from scipy import optimize
 
 
 class MolFileReadingException(Exception):
@@ -569,6 +570,17 @@ def dihedral_angle_delete(request):
 	return JsonResponse(dihedrals, safe=False)
 
 
+def potential_u(phi, phi0, f, j):
+	"""
+	потенциал U двугранного угла, зависящий от фи
+	:param phi: величина двугранного угла
+	:return: потенциал в ??? чём ???
+	"""
+	a = (f*2*np.pi)**2 * j
+	u = a * (1 - np.cos(phi - phi0))
+	return u
+
+
 @post_with_parameters("id")
 def dihedral_angle_optimize(request):
 	# определение энергии двугранного угла
@@ -593,8 +605,8 @@ def dihedral_angle_optimize(request):
 	if len(extrems) != 2 or len(inners) != 2:
 		return HttpResponse("wrong configuration of dihedral link", status=500)
 
-	point1 = Point3D(inners[0].x, inners[0].y, inners[0].z, evaluate=False)
-	point2 = Point3D(inners[1].x, inners[1].y, inners[1].z, evaluate=False)
+	point1 = Point3D(float(inners[0].x), float(inners[0].y), float(inners[0].z), evaluate=True)
+	point2 = Point3D(float(inners[1].x), float(inners[1].y), float(inners[1].z), evaluate=True)
 	axis = Line3D(point1, point2)
 	# плоскости двугранного yгла
 	try:
@@ -614,16 +626,20 @@ def dihedral_angle_optimize(request):
 	angle_value = plane1.angle_between(plane2)
 	angle_value_degrees = degrees(angle_value)
 
-	point3 = Point3D(extrems[0].x, extrems[0].y, extrems[0].z, evaluate=False)
-	point4 = Point3D(extrems[1].x, extrems[1].y, extrems[1].z, evaluate=False)
+	point3 = Point3D(float(extrems[0].x), float(extrems[0].y), float(extrems[0].z), evaluate=True)
+	point4 = Point3D(float(extrems[1].x), float(extrems[1].y), float(extrems[1].z), evaluate=True)
 	j1 = extrems[0].mass * axis.distance(point3)**2.0
 	j2 = extrems[1].mass * axis.distance(point4)**2.0
+	j = j1 + j2  # суммарный момент инерции
+	phi_0 = np.pi*2 + 3.0*np.pi/4.0 # фи0
+	f = 3e1  # частота в герцах
 
-	phi_0 = 0
-	a = j1 + j2
-	energy = a*cos(angle_value - phi_0)
+	# исходные данные для оптимизации
+	x0 = np.zeros(1, dtype=np.float64)  # начальная точка
+	x0[0] = angle_value
+	minimum = optimize.minimize(potential_u, x0, args=(phi_0, f, j), method="CG")
 
-	return HttpResponse(f"energy: {energy}")
+	return HttpResponse(str(minimum))
 
 
 def valence_angle_change(request):
