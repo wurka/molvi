@@ -17,7 +17,7 @@ from re import sub as resub
 import numpy as np
 import pickle
 from sympy import Line3D, Point3D, Plane
-from math import degrees, cos
+from math import degrees, cos, sin
 from scipy import optimize
 
 
@@ -570,13 +570,86 @@ def dihedral_angle_delete(request):
 	return JsonResponse(dihedrals, safe=False)
 
 
-def potential_u(phi, phi0, f, j):
+def get_normal(x1, y1, z1, x2, y2, z2, x3, y3, z3):
+	return [
+		(y2 - y1) * (z3 - z2) - (y3 - y2) * (z2 - z1),
+		(x3 - x2) * (z2 - z1) - (x2 - x1) * (z3 - z2),
+		(x2 - x1) * (y3 - y2) - (x3 - x2) * (y2 - y1)
+	]
+
+
+def potential_u(atom_coordinates: np.ndarray, axis_coordinates: np.ndarray, atom_mass: np.ndarray):
 	"""
-	потенциал U двугранного угла, зависящий от фи
-	:param phi: величина двугранного угла
-	:return: потенциал в ??? чём ???
+	рассчитывается потенциал набора атомов
+	:param atom_coordinates: массив с координатами вида [[x1, y1, z1], [x2, y2...z4]] точки образуют двугранный угол 1-2-3-4
+	:param axis_coordinates: положение атомов, находящихся на оси, положение которой не должно измениться
+	:param atom_mass: масса 4 атомов
+	:return: массив изменённых координат
 	"""
-	a = (f*2*np.pi)**2 * j
+	print("___________________")
+	print(atom_coordinates)
+
+	if axis_coordinates.shape != (6,):
+		raise ValueError("axis_coordinates must be one dimensional array with 6 points")
+	if atom_coordinates.shape != (12, ):
+		raise ValueError("atom_coordinates must be [4,3] array (4 points)")
+	if atom_mass.shape != (4,):
+		raise ValueError("atom mass must be one dimensional array with 4 values")
+
+	ac = atom_coordinates
+
+	#try:
+		# плоскость атомов 0, 1, 2
+		#plane1 = Plane(
+		#	Point3D(ac[0*3+0], ac[0*3+1], ac[0*3+2], evaluate=False),
+		#	Point3D(ac[1*3+0], ac[1*3+1], ac[1*3+2], evaluate=False),
+		#	Point3D(ac[2*3+0], ac[2*3+1], ac[2*3+2], evaluate=False),
+		#)
+		# плоскость атомов 1, 2, 3
+		#plane2 = Plane(
+		#	Point3D(ac[1*3+0], ac[1*3+1], ac[1*3+2], evaluate=False),
+		#	Point3D(ac[2*3+0], ac[2*3+1], ac[2*3+2], evaluate=False),
+		#	Point3D(ac[3*3+0], ac[3*3+1], ac[3*3+2], evaluate=False),
+		#)
+	#except ValueError:
+	#	raise ValueError("Wrong dihedral angle configuration: unable to build planes. Some atoms in line?")
+
+	try:
+		# phi = float(plane1.angle_between(plane2))  # exception, bitch
+
+
+		#n1 = plane1.normal_vector
+		#n2 = plane2.normal_vector
+		x1, y1, z1 = ac[0], ac[1], ac[2]
+		x2, y2, z2 = ac[3], ac[4], ac[5]
+		x3, y3, z3 = ac[6], ac[7], ac[8]
+		x4, y4, z4 = ac[9], ac[10], ac[11]
+		n1 = get_normal(x1, y1, z1, x2, y2, z2, x3, y3, z3)
+		n2 = get_normal(x2, y2, z2, x3, y3, z3, x4, y4, z4)
+		d1 = sqrt(n1[0] ** 2 + n1[1] ** 2 + n1[2] ** 2)
+		d2 = sqrt(n2[0] ** 2 + n2[1] ** 2 + n2[2] ** 2)
+
+		if (d1*d2) == 0:
+			raise ValueError("WTF! Plane have (0,0,0) normal. What?")
+		cosarg = (n1[0]*n2[0] + n1[1]*n2[1] + n1[2]*n2[2])/(d1*d2)
+		cosarg = min(1, cosarg)
+		cosarg = max(-1, cosarg)
+		phi = acos(cosarg)
+		print(f"phi: {phi}")
+	except TypeError as ex:
+		print(ex)
+		pass
+
+	axis = Line3D(Point3D(ac[1*3+0], ac[1*3+1], ac[1*3+2]), Point3D(ac[2*3+0], ac[2*3+1], ac[2*3+2]))
+	j1 = atom_mass[0] * axis.distance(Point3D(ac[0*3+0], ac[0*3+1], ac[0*3+2])) ** 2.0
+	j2 = atom_mass[1] * axis.distance(Point3D(ac[0*3+0], ac[0*3+1], ac[0*3+2])) ** 2.0
+	j = j1 + j2  # суммарный момент инерции
+
+	f = 3e1  # частота, Гц
+	phi0 = 0.0  # фи 0 в радианах
+
+	a = (f * 2 * np.pi) ** 2 * j
+	a = 1  # а почему бы и нет
 	u = a * (1 - np.cos(phi - phi0))
 	return u
 
@@ -591,53 +664,37 @@ def dihedral_angle_optimize(request):
 	except DihedralAngle.DoesNotExist:
 		return HttpResponse(f"there is no dihedral angle with id={daid}", status=500)
 
-	links = DihedralAngleLink.objects.filter(angle=dangle)
-	extrems = list()  # список "крайних" атомов
-	inners = list()  # список "внутренних" атомов
-	for link in links:
-		for a in [link.link.atom1, link.link.atom2]:
-			if a not in extrems:
-				extrems.append(a)
-			else:  # атом встрелся второй раз, значит он внутренний
-				extrems.remove(a)
-				inners.append(a)
-	# в двугранном угле должны быть только 2 крайних атома и 2 внутренних
-	if len(extrems) != 2 or len(inners) != 2:
-		return HttpResponse("wrong configuration of dihedral link", status=500)
+	links = DihedralAngleLink.objects.filter(angle=dangle).order_by("id")
+	if len(links) != 3:
+		return HttpResponse("Dihedral angle must contains exactly 3 links", status=500)
 
-	point1 = Point3D(float(inners[0].x), float(inners[0].y), float(inners[0].z), evaluate=True)
-	point2 = Point3D(float(inners[1].x), float(inners[1].y), float(inners[1].z), evaluate=True)
-	axis = Line3D(point1, point2)
-	# плоскости двугранного yгла
-	try:
-		plane1 = Plane(
-			Point3D(extrems[0].x, extrems[0].y, extrems[0].z, evaluate=False),
-			Point3D(inners[0].x, inners[0].y, inners[0].z, evaluate=False),
-			Point3D(inners[1].x, inners[1].y, inners[1].z, evaluate=False),
-		)
-		plane2 = Plane(
-			Point3D(extrems[1].x, extrems[1].y, extrems[1].z, evaluate=False),
-			Point3D(inners[0].x, inners[0].y, inners[0].z, evaluate=False),
-			Point3D(inners[1].x, inners[1].y, inners[1].z, evaluate=False),
-		)
-	except ValueError:
-		return HttpResponse("Wrong dihedral angle configuration: unable to build planes. Some atoms in line?")
+	# замечание! связи должны быть упорядочены (двугранный угол состоит из атомов: 1-2-3-4
+	# link1: 1-2, link2: 2-3, link3: 3-4
+	# внешний атом не должен быть в "средней" связи
+	e = [None, None]
+	i = [None, None]
 
-	angle_value = plane1.angle_between(plane2)
-	angle_value_degrees = degrees(angle_value)
+	for indx, link in enumerate([links[0], links[2]]):  # цикл по "внешним" связям
+		if link.link.atom1 not in [links[1].link.atom1, links[1].link.atom2]:  # atom1 в link не входит в "среднюю" связь
+			e[indx] = link.link.atom1
+			i[indx] = link.link.atom2
+		else:
+			e[indx] = link.link.atom2
+			i[indx] = link.link.atom1
+	e1, e2, i1, i2 = e[0], e[1], i[0], i[1]
 
-	point3 = Point3D(float(extrems[0].x), float(extrems[0].y), float(extrems[0].z), evaluate=True)
-	point4 = Point3D(float(extrems[1].x), float(extrems[1].y), float(extrems[1].z), evaluate=True)
-	j1 = extrems[0].mass * axis.distance(point3)**2.0
-	j2 = extrems[1].mass * axis.distance(point4)**2.0
-	j = j1 + j2  # суммарный момент инерции
-	phi_0 = np.pi*2 + 3.0*np.pi/4.0 # фи0
-	f = 3e1  # частота в герцах
+	# исходное положение атомов (x0)
+	atom_coordinates = np.array([
+		e1.x, e1.y, e1.z, i1.x, i1.y, i1.z, i2.x, i2.y, i2.z, e2.x, e2.y, e2.z
+	], dtype=np.float64)
+	axis_coordinates = np.array([i1.x, i1.y, i1.z, i2.x, i2.y, i2.z], dtype=np.float64)
+	atom_mass = np.array([e1.mass, i1.mass, i2.mass, e2.mass], dtype=np.float64)
 
-	# исходные данные для оптимизации
-	x0 = np.zeros(1, dtype=np.float64)  # начальная точка
-	x0[0] = angle_value
-	minimum = optimize.minimize(potential_u, x0, args=(phi_0, f, j), method="CG")
+	minimum = optimize.minimize(
+		potential_u, atom_coordinates, args=(axis_coordinates, atom_mass), method="CG",
+		options={'disp': True, 'gtol': 1}, jac=get_jac)
+	print("DONE")
+	print(minimum)
 
 	return HttpResponse(str(minimum))
 
@@ -1166,3 +1223,94 @@ def edit_link_set_length(request):
 		atom.save()
 
 	return HttpResponse("OK")
+
+
+def get_jac(atom_coordinates, xx, xxx):
+	phi0 = 0  # !!!!!
+	x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4 = atom_coordinates
+	n1x, n1y, n1z = get_normal(x1, y1, z1, x2, y2, z2, x3, y3, z3)
+	n2x, n2y, n2z = get_normal(x2, y2, z2, x3, y3, z3, x4, y4, z4)
+
+	norm_n1 = sqrt(n1x**2 + n1y**2 + n1z**2)
+	norm_n2 = sqrt(n2x**2 + n2y**2 + n2z**2)
+
+	scalar_n1n2 = n1x*n2x + n1y*n2y + n1z*n2z
+
+	a = 1  # аплитуда
+	cosarg = scalar_n1n2 / norm_n1 / norm_n2
+	cosarg = min(1, cosarg)
+	cosarg = max(-1, cosarg)
+	phi = acos(cosarg)
+	dudphi = a*sin(phi-phi0)
+
+	A = scalar_n1n2/(norm_n1*norm_n2)
+	dAdn1x = (n2x/norm_n1 - scalar_n1n2*n1x/(norm_n1**3))/norm_n2
+	dAdn1z = (n2z/norm_n1 - scalar_n1n2*n1z/(norm_n1**3))/norm_n2
+	dAdn1y = (n2y/norm_n1 - scalar_n1n2*n1y/(norm_n1**3))/norm_n2
+
+	dAdn2x = (n1x/norm_n2 - scalar_n1n2*n2x/(norm_n2**3))/norm_n1
+	dAdn2y = (n1y/norm_n2 - scalar_n1n2*n2y/(norm_n2**3))/norm_n1
+	dAdn2z = (n1z/norm_n2 - scalar_n1n2*n2z/(norm_n2**3))/norm_n1
+
+	dphidn1x = -1.0 / sqrt(1 - A ** 2) * (dAdn1x)
+	dphidn1y = -1.0 / sqrt(1 - A ** 2) * (dAdn1y)
+	dphidn1z = -1.0 / sqrt(1 - A ** 2)*(dAdn1z)
+	dphidn2z = -1.0 / sqrt(1 - A ** 2)*(dAdn2z)
+	dphidn2x = -1.0 / sqrt(1 - A ** 2)*(dAdn2x)
+
+	dphidn2y = -1.0 / sqrt(1 - A ** 2) * (dAdn2y)
+
+	dn1zdx1 = y2 - y3
+	dn1ydx1 = z3 - z2
+	dn1xdy1 = z2 - z3
+	dn1zdy1 = x3 - x2
+	dn1xdz1 = y3 - y2
+	dn1ydz1 = x2 - x3
+	dn1ydx2 = z1 - z3
+	dn1zdx2 = y3 - y1
+	dn2ydx2 = z4 - z3
+	dn2zdx2 = y3 - y4
+	dn1xdy2 = z3 - z1
+	dn1zdy2 = x1 - x3
+	dn2xdy2 = z3 - z4
+	dn2zdy2 = x4 - x3
+	dn1xdz2 = y1 - y3
+	dn1ydz2 = x3 - x1
+	dn2xdz2 = y4 - y3
+	dn2ydz2 = x3 - x4
+	dn1ydx3 = z2 - z1
+	dn1zdx3 = y1 - y2
+	dn2ydx3 = z2 - z4
+	dn2zdx3 = y4 - y2
+	dn1xdy3 = z1 - z2
+	dn1zdy3 = x2 - x1
+	dn2xdy3 = z4 - z2
+	dn2zdy3 = x2 - x4
+	dn1xdz3 = y2 - y1
+	dn1ydz3 = x1 - x2
+	dn2xdz3 = y2 - y4
+	dn2ydz3 = x4 - x2
+	dn2ydx4 = z3 - z2
+	dn2zdx4 = y2 - y3
+	dn2xdy4 = z2 - z3
+	dn2zdy4 = x3 - x2
+	dn2xdz4 = y3 - y2
+	dn2ydz4 = x2 - x3
+
+	dudx1 = dudphi * (dphidn1y*dn1ydx1 + dphidn1z*dn1zdx1)
+	dudy1 = dudphi * (dphidn1x*dn1xdy1 + dphidn1z*dn1zdy1)
+	dudz1 = dudphi * (dphidn1x*dn1xdz1 + dphidn1y*dn1ydz1)
+	dudx2 = dudphi * (dphidn1y*dn1ydx2 + dphidn1z*dn1zdx2 + dphidn2y*dn2ydx2 + dphidn2z*dn2zdx2)
+	dudy2 = dudphi * (dphidn1x*dn1xdy2 + dphidn1z*dn1zdy2 + dphidn2x*dn2xdy2 + dphidn2z*dn2zdy2)
+	dudz2 = dudphi * (dphidn1x*dn1xdz2 + dphidn1y*dn1ydz2 + dphidn2x*dn2xdz2 + dphidn2y*dn2ydz2)
+	dudx3 = dudphi * (dphidn1y*dn1ydx3 + dphidn1z*dn1zdx3 + dphidn2y*dn2ydx3 + dphidn2z*dn2zdx3)
+	dudy3 = dudphi * (dphidn1x*dn1xdy3 + dphidn1z*dn1zdy3 + dphidn2x*dn2xdy3 + dphidn2z*dn2zdy3)
+	dudz3 = dudphi * (dphidn1x*dn1xdz3 + dphidn1y*dn1ydz3 + dphidn2x*dn2xdz3 + dphidn2y*dn2ydz3)
+	dudx4 = dudphi * (dphidn2y*dn2ydx4 + dphidn2z*dn2zdx4)
+	dudy4 = dudphi * (dphidn2x*dn2xdy4 + dphidn2z*dn2zdy4)
+	dudz4 = dudphi * (dphidn2x*dn2xdz4 + dphidn2y*dn2ydz4)
+
+	ans = [dudx1, dudy1, dudz1, dudx2, dudy2, dudz2, dudx3, dudy3, dudz3, dudx4, dudy4, dudz4]
+	return ans
+
+
