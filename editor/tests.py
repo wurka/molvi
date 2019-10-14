@@ -11,13 +11,29 @@ data = [
     0.31288135, 1.32721277, -2.0007155, -0.17226318, 0.93802569
 ]
 
-data = [-0.00429334, -0.46211817,  0.11662185,  0.00520712, -0.05948275,
-        0.97894422, -1.07997775,  0.08518725,  1.26517019, -1.99990403,
-       -0.04693638,  0.96231296]
+data = [0., -0.48334998, 0.12951325, 0., 0., 0.9667, -1.078968, 0., 1.260136, -2., 0., 0.9667, ]
+
+data2 = [-0.0033702 , -0.46188597,  0.11712099,  0.00403239, -0.05825086,
+        0.98152715, -1.07963019,  0.08165045,  1.25770111, -2.        ,
+       -0.04486361,  0.9667    ]
+
+
 
 x = [data[i] for i in range(len(data)) if i % 3 == 0]
 y = [data[i] for i in range(len(data)) if i % 3 == 1]
 z = [data[i] for i in range(len(data)) if i % 3 == 2]
+
+x2 = [data2[i] for i in range(len(data2)) if i % 3 == 0]
+y2 = [data2[i] for i in range(len(data2)) if i % 3 == 1]
+z2 = [data2[i] for i in range(len(data2)) if i % 3 == 2]
+
+
+distances = [sqrt((x[i]-x[i+1])**2+(y[i]-y[i+1])**2+(z[i]-z[i+1])**2) for i in range(len(x)-1)]
+distances2 = [sqrt((x2[i]-x2[i+1])**2+(y2[i]-y2[i+1])**2+(z2[i]-z2[i+1])**2) for i in range(len(x)-1)]
+
+print("zhopa")
+print(distances)
+print(distances2)
 
 
 p1 = Point3D(x[0], y[0], z[0], evaluate=False)
@@ -49,4 +65,5 @@ myphi = acos(xx)
 print(myphi)
 
 ax.plot3D(x, y, z)
+ax.plot3D(x2, y2, z2)
 plt.show()

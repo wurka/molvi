@@ -17,8 +17,10 @@ from re import sub as resub
 import numpy as np
 import pickle
 from sympy import Line3D, Point3D, Plane
-from math import degrees, cos, sin
+from math import degrees, radians, cos, sin
 from scipy import optimize
+from datetime import datetime
+from .views2 import shift_atoms
 
 
 class MolFileReadingException(Exception):
@@ -578,15 +580,18 @@ def get_normal(x1, y1, z1, x2, y2, z2, x3, y3, z3):
 	]
 
 
-def potential_u(atom_coordinates: np.ndarray, axis_coordinates: np.ndarray, atom_mass: np.ndarray):
+def potential_u(atom_coordinates: np.ndarray, axis_coordinates: np.ndarray, atom_mass: np.ndarray, phi0: float):
 	"""
 	рассчитывается потенциал набора атомов
 	:param atom_coordinates: массив с координатами вида [[x1, y1, z1], [x2, y2...z4]] точки образуют двугранный угол 1-2-3-4
 	:param axis_coordinates: положение атомов, находящихся на оси, положение которой не должно измениться
 	:param atom_mass: масса 4 атомов
+	:param phi0: параметр для потенциала
 	:return: массив изменённых координат
 	"""
+	start_time = datetime.now()
 	print("___________________")
+
 	print(atom_coordinates)
 
 	if axis_coordinates.shape != (6,):
@@ -598,28 +603,7 @@ def potential_u(atom_coordinates: np.ndarray, axis_coordinates: np.ndarray, atom
 
 	ac = atom_coordinates
 
-	#try:
-		# плоскость атомов 0, 1, 2
-		#plane1 = Plane(
-		#	Point3D(ac[0*3+0], ac[0*3+1], ac[0*3+2], evaluate=False),
-		#	Point3D(ac[1*3+0], ac[1*3+1], ac[1*3+2], evaluate=False),
-		#	Point3D(ac[2*3+0], ac[2*3+1], ac[2*3+2], evaluate=False),
-		#)
-		# плоскость атомов 1, 2, 3
-		#plane2 = Plane(
-		#	Point3D(ac[1*3+0], ac[1*3+1], ac[1*3+2], evaluate=False),
-		#	Point3D(ac[2*3+0], ac[2*3+1], ac[2*3+2], evaluate=False),
-		#	Point3D(ac[3*3+0], ac[3*3+1], ac[3*3+2], evaluate=False),
-		#)
-	#except ValueError:
-	#	raise ValueError("Wrong dihedral angle configuration: unable to build planes. Some atoms in line?")
-
 	try:
-		# phi = float(plane1.angle_between(plane2))  # exception, bitch
-
-
-		#n1 = plane1.normal_vector
-		#n2 = plane2.normal_vector
 		x1, y1, z1 = ac[0], ac[1], ac[2]
 		x2, y2, z2 = ac[3], ac[4], ac[5]
 		x3, y3, z3 = ac[6], ac[7], ac[8]
@@ -635,22 +619,23 @@ def potential_u(atom_coordinates: np.ndarray, axis_coordinates: np.ndarray, atom
 		cosarg = min(1, cosarg)
 		cosarg = max(-1, cosarg)
 		phi = acos(cosarg)
-		print(f"phi: {phi}")
+		print(f"phi: {degrees(phi)}")
 	except TypeError as ex:
 		print(ex)
 		pass
 
-	axis = Line3D(Point3D(ac[1*3+0], ac[1*3+1], ac[1*3+2]), Point3D(ac[2*3+0], ac[2*3+1], ac[2*3+2]))
-	j1 = atom_mass[0] * axis.distance(Point3D(ac[0*3+0], ac[0*3+1], ac[0*3+2])) ** 2.0
-	j2 = atom_mass[1] * axis.distance(Point3D(ac[0*3+0], ac[0*3+1], ac[0*3+2])) ** 2.0
-	j = j1 + j2  # суммарный момент инерции
+	# axis = Line3D(Point3D(ac[1*3+0], ac[1*3+1], ac[1*3+2]), Point3D(ac[2*3+0], ac[2*3+1], ac[2*3+2]))
+	# j1 = atom_mass[0] * axis.distance(Point3D(ac[0*3+0], ac[0*3+1], ac[0*3+2])) ** 2.0
+	# j2 = atom_mass[1] * axis.distance(Point3D(ac[0*3+0], ac[0*3+1], ac[0*3+2])) ** 2.0
+	# j = j1 + j2  # суммарный момент инерции
 
 	f = 3e1  # частота, Гц
-	phi0 = 0.0  # фи 0 в радианах
 
-	a = (f * 2 * np.pi) ** 2 * j
+	# a = (f * 2 * np.pi) ** 2 * j
 	a = 1  # а почему бы и нет
 	u = a * (1 - np.cos(phi - phi0))
+	stop_time = datetime.now()
+	print(f"---- mr. POTENTIAL: {(stop_time-start_time).microseconds}s----")
 	return u
 
 
@@ -658,6 +643,7 @@ def potential_u(atom_coordinates: np.ndarray, axis_coordinates: np.ndarray, atom
 def dihedral_angle_optimize(request):
 	# определение энергии двугранного угла
 	# двугранный угол состоит из 4 атомов: 1-2-3-4. 1 и 4 - крайние, 2 и 3 - внутренниие атомы
+	# атомы 1 и 2 должны быть из 1 кластера, атомы 3 и 4 - из другого
 	daid = request.POST["id"]
 	try:
 		dangle = DihedralAngle.objects.get(id=daid)
@@ -690,11 +676,30 @@ def dihedral_angle_optimize(request):
 	axis_coordinates = np.array([i1.x, i1.y, i1.z, i2.x, i2.y, i2.z], dtype=np.float64)
 	atom_mass = np.array([e1.mass, i1.mass, i2.mass, e2.mass], dtype=np.float64)
 
+	phi0 = radians(10.0)
+	print("atom_coordinates")
+	print(atom_coordinates)
 	minimum = optimize.minimize(
-		potential_u, atom_coordinates, args=(axis_coordinates, atom_mass), method="CG",
-		options={'disp': True, 'gtol': 1}, jac=get_jac)
+		potential_u, atom_coordinates, args=(axis_coordinates, atom_mass, phi0), method="CG",
+		options={})
+
 	print("DONE")
 	print(minimum)
+
+	# теперь надо двигать атомы так, чтобы конфигурация была изменена
+	cluster1 = ClusterAtom.objects.get(atom=e[0]).cluster
+	cluster2 = ClusterAtom.objects.get(atom=i[0]).cluster
+	cluster3 = ClusterAtom.objects.get(atom=e[1]).cluster
+	cluster4 = ClusterAtom.objects.get(atom=i[1]).cluster
+
+	# первых 2 атома должны быть от одного кластера, 2 последних - от другого
+	if cluster1 != cluster2 or cluster3 != cluster4:
+		return HttpResponse("Wrong source config: dihedral angle must connect 2 clusters", status=500)
+
+	r1, r2, r3 = (i[1].x, i[1].y, i[1].z), (i[0].x, i[0].y, i[0].z), (e[0].x, e[0].y, e[0].z)
+	s = minimum.x
+	r1prime, r2prime, r3prime = (s[6], s[7], s[8]), (s[3], s[4], s[5]), (s[0], s[1], s[2])
+	shift_atoms(cluster1, r1, r2, r3, r1prime, r2prime, r3prime)
 
 	return HttpResponse(str(minimum))
 
@@ -1225,8 +1230,8 @@ def edit_link_set_length(request):
 	return HttpResponse("OK")
 
 
-def get_jac(atom_coordinates, xx, xxx):
-	phi0 = 0  # !!!!!
+def get_jac(atom_coordinates, *args):
+	phi0 = args[2]
 	x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4 = atom_coordinates
 	n1x, n1y, n1z = get_normal(x1, y1, z1, x2, y2, z2, x3, y3, z3)
 	n2x, n2y, n2z = get_normal(x2, y2, z2, x3, y3, z3, x4, y4, z4)
@@ -1244,21 +1249,25 @@ def get_jac(atom_coordinates, xx, xxx):
 	dudphi = a*sin(phi-phi0)
 
 	A = scalar_n1n2/(norm_n1*norm_n2)
-	dAdn1x = (n2x/norm_n1 - scalar_n1n2*n1x/(norm_n1**3))/norm_n2
-	dAdn1z = (n2z/norm_n1 - scalar_n1n2*n1z/(norm_n1**3))/norm_n2
-	dAdn1y = (n2y/norm_n1 - scalar_n1n2*n1y/(norm_n1**3))/norm_n2
 
-	dAdn2x = (n1x/norm_n2 - scalar_n1n2*n2x/(norm_n2**3))/norm_n1
-	dAdn2y = (n1y/norm_n2 - scalar_n1n2*n2y/(norm_n2**3))/norm_n1
-	dAdn2z = (n1z/norm_n2 - scalar_n1n2*n2z/(norm_n2**3))/norm_n1
+	if abs(A) >= 0.999999:
+		return np.zeros(12, dtype=np.float32)
 
-	dphidn1x = -1.0 / sqrt(1 - A ** 2) * (dAdn1x)
-	dphidn1y = -1.0 / sqrt(1 - A ** 2) * (dAdn1y)
-	dphidn1z = -1.0 / sqrt(1 - A ** 2)*(dAdn1z)
-	dphidn2z = -1.0 / sqrt(1 - A ** 2)*(dAdn2z)
-	dphidn2x = -1.0 / sqrt(1 - A ** 2)*(dAdn2x)
+	dadn1x = (n2x/norm_n1 - scalar_n1n2*n1x/(norm_n1**3))/norm_n2
+	dadn1z = (n2z/norm_n1 - scalar_n1n2*n1z/(norm_n1**3))/norm_n2
+	dadn1y = (n2y/norm_n1 - scalar_n1n2*n1y/(norm_n1**3))/norm_n2
 
-	dphidn2y = -1.0 / sqrt(1 - A ** 2) * (dAdn2y)
+	dadn2x = (n1x/norm_n2 - scalar_n1n2*n2x/(norm_n2**3))/norm_n1
+	dadn2y = (n1y/norm_n2 - scalar_n1n2*n2y/(norm_n2**3))/norm_n1
+	dadn2z = (n1z/norm_n2 - scalar_n1n2*n2z/(norm_n2**3))/norm_n1
+
+	dphidn1x = -1.0 / sqrt(1 - A ** 2) * dadn1x
+	dphidn1y = -1.0 / sqrt(1 - A ** 2) * dadn1y
+	dphidn1z = -1.0 / sqrt(1 - A ** 2) * dadn1z
+	dphidn2z = -1.0 / sqrt(1 - A ** 2) * dadn2z
+	dphidn2x = -1.0 / sqrt(1 - A ** 2) * dadn2x
+
+	dphidn2y = -1.0 / sqrt(1 - A ** 2) * dadn2y
 
 	dn1zdx1 = y2 - y3
 	dn1ydx1 = z3 - z2
@@ -1310,7 +1319,13 @@ def get_jac(atom_coordinates, xx, xxx):
 	dudy4 = dudphi * (dphidn2x*dn2xdy4 + dphidn2z*dn2zdy4)
 	dudz4 = dudphi * (dphidn2x*dn2xdz4 + dphidn2y*dn2ydz4)
 
-	ans = [dudx1, dudy1, dudz1, dudx2, dudy2, dudz2, dudx3, dudy3, dudz3, dudx4, dudy4, dudz4]
+	ans = np.asarray(
+		[dudx1, dudy1, dudz1, dudx2, dudy2, dudz2, dudx3, dudy3, dudz3, dudx4, dudy4, dudz4], dtype=np.float64)
+
+	print(ans)
+
 	return ans
+
+
 
 
