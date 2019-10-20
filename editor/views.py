@@ -676,7 +676,7 @@ def dihedral_angle_optimize(request):
 	axis_coordinates = np.array([i1.x, i1.y, i1.z, i2.x, i2.y, i2.z], dtype=np.float64)
 	atom_mass = np.array([e1.mass, i1.mass, i2.mass, e2.mass], dtype=np.float64)
 
-	phi0 = radians(10.0)
+	phi0 = radians(0.0)
 	print("atom_coordinates")
 	print(atom_coordinates)
 	minimum = optimize.minimize(
@@ -699,7 +699,37 @@ def dihedral_angle_optimize(request):
 	r1, r2, r3 = (i[1].x, i[1].y, i[1].z), (i[0].x, i[0].y, i[0].z), (e[0].x, e[0].y, e[0].z)
 	s = minimum.x
 	r1prime, r2prime, r3prime = (s[6], s[7], s[8]), (s[3], s[4], s[5]), (s[0], s[1], s[2])
+
+
+
+
+	# for debug #########
+	cas = list(ClusterAtom.objects.filter(cluster=cluster1)) + list(ClusterAtom.objects.filter(cluster=cluster3))
+	data2debug = list()
+	for ca in cas:
+		data2debug.append(ca.atom.x)
+		data2debug.append(ca.atom.y)
+		data2debug.append(ca.atom.z)
+
+	##################
+
+	# return HttpResponse("terminated for debug")
 	shift_atoms(cluster1, r1, r2, r3, r1prime, r2prime, r3prime)
+
+	r1, r2, r3 = (i[0].x, i[0].y, i[0].z), (i[1].x, i[1].y, i[1].z), (e[1].x, e[1].y, e[1].z)
+	r1prime, r2prime, r3prime = (s[3], s[4], s[5]), (s[6], s[7], s[8]), (s[9], s[10], s[11])
+
+	shift_atoms(cluster2, r1, r2, r3, r1prime, r2prime, r3prime)
+
+	e[0].x, e[0].y, e[0].z = s[0], s[1], s[2]
+	i[0].x, i[0].y, i[0].z = s[3], s[4], s[5]
+	i[1].x, i[1].y, i[1].z = s[6], s[7], s[8]
+	e[1].x, e[1].y, e[1].z = s[9], s[10], s[11]
+
+	e[0].save()
+	i[0].save()
+	i[1].save()
+	e[1].save()
 
 	return HttpResponse(str(minimum))
 
@@ -1325,7 +1355,3 @@ def get_jac(atom_coordinates, *args):
 	print(ans)
 
 	return ans
-
-
-
-

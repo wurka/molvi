@@ -775,6 +775,8 @@ class MolviEngine {
                 engine.userMessage();
                 if (doc.selectedAtomIds.length > 1) {
                     console.error("zdes tvoritsia mistika!");
+                    console.log("vybrany atomy: ");
+                    console.log(doc.selectedAtomIds);
                 }
                 $("#transformRotate").show();
                 view.disableControls();
@@ -1352,11 +1354,20 @@ class MolviEngine {
      */
     rotateClusterFromHtml() {
         var cluster = null,
-            originId = parseInt($("#rotateOrigin").val()),
+            originDocumentId = parseInt($("#rotateOrigin").val()),
+            originId = 0,
             ox = 0,
             oy = 0,
             oz = 0,
             atoms = [];
+
+        // поиск id атома по documentIndex
+        Object.keys(app.atoms).forEach((atomid)=>{
+            console.log(app.atoms[atomid].documentindex );
+            if (app.atoms[atomid].documentindex === originDocumentId) {
+                originId = parseInt(atomid);
+            }
+        });
 
         //цикл по всем кластерам
         Object.keys(app.clusters).forEach((key)=>{

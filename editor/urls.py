@@ -17,6 +17,7 @@ Including another URLconf
 from django.urls import path  # , include
 from . import views
 from . import optimizer
+from . import views2
 
 urlpatterns = [
 	path('molvi.html', views.main_page),
@@ -48,5 +49,6 @@ urlpatterns = [
 
 	path('debug-optimizer', optimizer.debug),
 	path('optimize', optimizer.optimize),  # оптимизировать молекулу по энергии
-	path('get-optimise-sources', optimizer.get_optimise_sources)
+	path('get-optimise-sources', optimizer.get_optimise_sources),
+	path('save-atoms-to-file', views2.save_atoms_to_file),
 ]
