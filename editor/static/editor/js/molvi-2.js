@@ -1470,7 +1470,7 @@ class MolviEngine {
         })
     }
     saveDocumentToServer() {
-        var mydoc = {
+        let mydoc = {
             "documentName": $("#saveFileName").val(),
             "clusters": [],
             "links": []
@@ -1478,14 +1478,14 @@ class MolviEngine {
 
         // заполнение поля clusters
         doc.clusters.forEach(function (cluster) {
-            var myCluster = {
+            let myCluster = {
                 "caption": cluster.caption,
                 "id": cluster.id,
                 "atoms": []
             };
             //заполнение атомов кластера
             cluster.atomList.forEach(function (atom) {
-                var myatom = {
+                let myatom = {
                     x: atom.x,
                     y: atom.y,
                     z: atom.z,
@@ -1499,7 +1499,7 @@ class MolviEngine {
 
         //заполнение поля links
         doc.links.forEach(function (link) {
-            var af = null,
+            let af = null,
                 at = null;
 
             doc.clusters.forEach(function (cluster) {
@@ -1609,7 +1609,9 @@ class MolviView {
 
         //camera = new THREE.OrthographicCamera(-10, 10, -10, 10, 0.1, 100)
         view.camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
-        view.camera.position.z = 3;
+        view.camera.position.y = 7;
+        view.camera.position.z = 7;
+        view.camera.lookAt(0, 0, 0);
 
         view.controls = new THREE.OrbitControls(this.camera);
         view.raycaster = new THREE.Raycaster();
@@ -2111,7 +2113,7 @@ $(document).ready(function(){
 
     let inputElement = document.getElementById('traceRange');
     inputElement.onkeypress = engine.autoTraceKeyPressed;
-    inputElement.value = 1.6;
+    inputElement.value = 1.4;
 
     //загрузить активный файл с сервера
     engine.LoadAtomDataFromServer(true);

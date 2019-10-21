@@ -20,7 +20,7 @@ from sympy import Line3D, Point3D, Plane
 from math import degrees, radians, cos, sin
 from scipy import optimize
 from datetime import datetime
-from .views2 import shift_atoms
+from .views2 import shift_atoms, get_distance
 
 
 class MolFileReadingException(Exception):
@@ -528,6 +528,7 @@ def dihedral_angle_create(request):
 		name = f"{doc_atoms[0].name}{doc_atoms[0].documentindex}"
 		name += f"-{doc_atoms[1].name}{doc_atoms[1].documentindex}"
 		name += f"-{doc_atoms[2].name}{doc_atoms[2].documentindex}"
+		name += f"-{doc_atoms[3].name}{doc_atoms[3].documentindex}"
 		newda = DihedralAngle.objects.create(
 			document=adoc, name=name)
 
@@ -580,13 +581,17 @@ def get_normal(x1, y1, z1, x2, y2, z2, x3, y3, z3):
 	]
 
 
-def potential_u(atom_coordinates: np.ndarray, axis_coordinates: np.ndarray, atom_mass: np.ndarray, phi0: float):
+def potential_u(
+		atom_coordinates: np.ndarray, axis_coordinates: np.ndarray, atom_mass: np.ndarray, phi0: float,
+		distances: tuple
+):
 	"""
 	рассчитывается потенциал набора атомов
 	:param atom_coordinates: массив с координатами вида [[x1, y1, z1], [x2, y2...z4]] точки образуют двугранный угол 1-2-3-4
 	:param axis_coordinates: положение атомов, находящихся на оси, положение которой не должно измениться
 	:param atom_mass: масса 4 атомов
 	:param phi0: параметр для потенциала
+	:param distances: расстояния между атомами
 	:return: массив изменённых координат
 	"""
 	start_time = datetime.now()
@@ -621,8 +626,7 @@ def potential_u(atom_coordinates: np.ndarray, axis_coordinates: np.ndarray, atom
 		phi = acos(cosarg)
 		print(f"phi: {degrees(phi)}")
 	except TypeError as ex:
-		print(ex)
-		pass
+		raise ex
 
 	# axis = Line3D(Point3D(ac[1*3+0], ac[1*3+1], ac[1*3+2]), Point3D(ac[2*3+0], ac[2*3+1], ac[2*3+2]))
 	# j1 = atom_mass[0] * axis.distance(Point3D(ac[0*3+0], ac[0*3+1], ac[0*3+2])) ** 2.0
@@ -634,8 +638,16 @@ def potential_u(atom_coordinates: np.ndarray, axis_coordinates: np.ndarray, atom
 	# a = (f * 2 * np.pi) ** 2 * j
 	a = 1  # а почему бы и нет
 	u = a * (1 - np.cos(phi - phi0))
+
+	d1prime = get_distance((x1, y1, z1), (x2, y2, z2))
+	d2prime = get_distance((x2, y2, z2), (x3, y3, z3))
+	d3prime = get_distance((x3, y3, z3), (x4, y4, z4))
+
+	# u += abs(distances[0] - d1prime) + abs(distances[1] - d2prime) + abs(distances[2] - d3prime)
+
 	stop_time = datetime.now()
 	print(f"---- mr. POTENTIAL: {(stop_time-start_time).microseconds}s----")
+
 	return u
 
 
@@ -675,12 +687,14 @@ def dihedral_angle_optimize(request):
 	], dtype=np.float64)
 	axis_coordinates = np.array([i1.x, i1.y, i1.z, i2.x, i2.y, i2.z], dtype=np.float64)
 	atom_mass = np.array([e1.mass, i1.mass, i2.mass, e2.mass], dtype=np.float64)
+	d1, d2, d3 = get_distance(e[0], i[0]), get_distance(i[0], i[1]), get_distance(i[1], e[1])
+	distances = (d1, d2, d3)
 
 	phi0 = radians(0.0)
 	print("atom_coordinates")
 	print(atom_coordinates)
 	minimum = optimize.minimize(
-		potential_u, atom_coordinates, args=(axis_coordinates, atom_mass, phi0), method="CG",
+		potential_u, atom_coordinates, args=(axis_coordinates, atom_mass, phi0, distances), method="CG",
 		options={})
 
 	print("DONE")
@@ -1042,7 +1056,10 @@ def open_mol_file(request):
 	if "filename" not in request.GET:
 		return HttpResponse("there si no parameter: filename", status=500)
 
-	active_doc = Document.objects.get(is_active=True)
+	try:
+		active_doc = Document.objects.get(is_active=True)
+	except Document.DoesNotExist:
+		active_doc = Document.objects.create(is_active=True)
 
 	clear = False
 	if 'clear' in request.GET:

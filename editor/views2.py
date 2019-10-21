@@ -2,9 +2,42 @@ from .models import Cluster, Atom, ClusterAtom
 from scipy import optimize
 import numpy as np
 from math import sqrt
-from .models import Document, Cluster, ClusterAtom
+from .models import Document, Cluster, ClusterAtom, Atom, Link
+from .models import DihedralAngle, DihedralAngleLink
 from django.http import HttpResponse
 from datetime import datetime
+
+
+def post_with_parameters(*args):
+	def decor(method):
+		def response(request):
+			if request.method != "POST":
+				return HttpResponse(f"please use POST request, not {request.method}", status=500)
+			for param in args:
+				if param not in request.POST:
+					return HttpResponse(f"there is no parameter {param}", status=500)
+			return method(request)
+		return response
+	return decor
+
+
+def get_distance(p1: tuple, p2: tuple):
+	"""
+	Вычислить расстояние между точками
+	:param p1: x1, y1, z1 - координаты точки 1
+	:param p2: x2, y2, z2 - координаты точки 2
+	:return: distance
+	"""
+	if isinstance(p1, Atom):
+		x1, y1, z1 = p1.x, p1.y, p1.z
+	else:
+		x1, y1, z1 = p1[0], p1[1], p1[2]
+	if isinstance(p2, Atom):
+		x2, y2, z2 = p2.x, p2.y, p2.z
+	else:
+		x2, y2, z2 = p2[0], p2[1], p2[2]
+
+	return sqrt((x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2)
 
 
 def get_normal(p1: tuple, p2: tuple, p3: tuple):
@@ -24,7 +57,8 @@ def get_normal(p1: tuple, p2: tuple, p3: tuple):
 	by = y2 - y3
 	bz = z2 - z3
 	xn, yn, zn = ay*bz - by*az, bx*az - ax*bz, ax*by - bx*ay
-	return (xn, yn, zn)
+	return xn, yn, zn
+
 
 def cosangle_between(v1: tuple, v2: tuple):
 	"""
@@ -130,3 +164,192 @@ def save_atoms_to_file(request):
 		return HttpResponse(str(ex))
 
 	return HttpResponse("Done " + str(datetime.now()))
+
+
+@post_with_parameters("name", "details", "creator")
+def save_active_doc(request):
+	"""
+	Сохранить текущий документ под именем request.POST['name']
+	:param request:
+	:return: HttpResponse("OK", status=200), елси ОК. HttpResponse("error message", status=500) в случае ошибки
+	"""
+	try:
+		adoc = Document.objects.get(is_active=True)
+	except Document.DoesNotExist:
+		return HttpResponse("There is no active document", status=500)
+
+	newdoc = Document.objects.create(
+		is_active=False, creator=request.POST["creator"],
+		details=request.POST['details'], name=request.POST['name'])
+
+	old2new_atoms = dict()  # key - старый атом, value - новый атом
+
+	# кластеры из документа
+	clusters = Cluster.objects.filter(document=adoc)
+	for cluster in clusters:
+		newcluster = Cluster.objects.create(
+			document=newdoc,
+			caption=adoc.caption
+		)
+		# атомы
+		atoms = ClusterAtom.objects.filter(cluster=cluster)
+		for atom in atoms:
+			newatom = Atom.objects.create(
+				document=newdoc,
+				x=atom.x,
+				y=atom.y,
+				z=atom.z,
+				name=atom.name,
+				color=atom.color,
+				mass=atom.mass,
+				radius=atom.radius,
+				molfile=atom.molfile,
+				molfileindex=atom.molfileindex,
+				documentindex=atom.documentindex,
+				mentableindex=atom.mentableindex,
+				valence=atom.valence
+			)
+			old2new_atoms[atom.id] = newatom.id
+			ClusterAtom.objects.create(
+				atom=newatom,
+				cluster=newcluster
+			)
+
+		# связи
+		old2new_links = dict()
+		links = Link.objects.filter(document=adoc)
+		for link in links:
+			newlink = Link.objects.create(
+				document=newdoc,
+				atom1=Atom.objects.get(id=old2new_atoms[link.atom1.id]),
+				atom2=Atom.objects.get(id=old2new_atoms[link.atom2.id])
+			)
+			old2new_links[link.id] = newlink.id
+
+		# двугранные углы
+		dh_angles = DihedralAngle.objects.filter(document=adoc)
+		for dh_angle in dh_angles:
+			new_dh_angle = DihedralAngle.objects.create(
+				name=dh_angle.name,
+				document=newdoc
+			)
+			dh_angle_links = DihedralAngleLink.objects.filter(angle=dh_angle)
+			for dh_angle_link in dh_angle_links:
+				DihedralAngleLink.objects.create(
+					angle=new_dh_angle,
+					link=Link.objects.get(id=old2new_links[dh_angle_link.link.id])
+				)
+
+	return HttpResponse("OK")
+
+
+@post_with_parameters("id")
+def load_document(request):
+	try:
+		adoc = Document.objects.get(is_active=True)
+	except Document.DoesNotExist:
+		Document.objects.create(
+			is_active=True,
+			creator="Python code",
+			details="automaticaly created at load_document function",
+			name="auto document",
+		)
+
+	# удаляем все записи, связанные с текущим активным документом
+	# двугранные углы
+	dh_angles = DihedralAngle.objects.filter(document=adoc)
+	for dh_angle in dh_angles:
+		DihedralAngleLink.objects.filter(angle=dh_angle).delete()
+		dh_angle.delete()
+
+	# связи
+	Link.objects.filter(document=adoc).delete()
+
+	# валентные углы
+	# TODO: добавить удаление валентных угло
+
+	# атомы
+	clusters = Cluster.objects.filter(document=adoc)
+	for cluster in clusters:
+		cluster_atom = ClusterAtom.objects.filter(cluster=cluster)
+		cluster_atom.atom.delete()
+		cluster.delete()
+
+	# создаём новые записи #################
+	try:
+		ldoc = Document.objects.get(id=request.GET['id'])
+	except Document.DoesNotExist:
+		return HttpResponse(
+			"there is no document with id {request.GET['id']} in base", status=500)
+
+	adoc.creator = ldoc.creator
+	adoc.details = ldoc.details
+	adoc.name = ldoc.name
+
+	# атомы
+	old2new_atoms = dict()  # список новых атомов
+	atoms = Atom.objects.filter(document=ldoc)
+	for atom in atoms:
+		newatom = Atom.objects.create(
+			document=adoc,
+			x=atom.x,
+			y=atom.y,
+			z=atom.z,
+			name=atom.name,
+			color=atom.color,
+			mass=atom.mass,
+			radius=atom.radius,
+			molfile=atom.molfile,
+			molfileindex=atom.molfileindex,
+			documentindex=atom.documentindex,
+			mentableindex=atom.mentableindex,
+			valence=atom.valence
+		)
+		old2new_atoms[atom.id] = newatom.id
+
+	# кластеры
+	old2new_clusters = dict()
+	clusters = Cluster.objects.filter(document=ldoc)
+	for cluster in clusters:
+		newcluster = cluster.objects.create(
+			document=adoc,
+			caption=cluster.caption
+		)
+		old2new_clusters[cluster.id] = newcluster.id
+
+		catoms = ClusterAtom.objects.filter(cluster=cluster)
+		for catom in catoms:
+			ClusterAtom.objects.create(
+				cluster=newcluster,
+				atom=Atom.objects.get(id=old2new_atoms[catom.atom.id])
+			)
+
+	# связи
+	old2new_links = dict()
+	links = Link.objects.filter(document=ldoc)
+	for link in links:
+		newlink = Link.objects.create(
+			document=adoc,
+			atom1=Atom.objects.get(id=old2new_atoms[link.atom1.id])
+		)
+		old2new_links[link.id] = newlink.id
+
+	# валентные углы
+	# TODO: валентные углы доделать
+
+	# двугранные углы
+	dh_angles = DihedralAngle.objects.filter(document=ldoc)
+	for dh_angle in dh_angles:
+		new_dh_angle = DihedralAngle.objects.create(
+			document=adoc,
+			name=dh_angle.name
+		)
+
+		dha_links = DihedralAngleLink.objects.filter(angle=dh_angle)
+		for dha_link in dha_links:
+			DihedralAngleLink.objects.create(
+				angle=new_dh_angle,
+				link=Link.objects.get(id=old2new_links[dha_link.link.id])
+			)
+
+	return HttpResponse("OK")
