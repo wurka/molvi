@@ -2,6 +2,14 @@
   font-family: "Times New Roman", serif;
   font-size: 16px; }
 
+body {
+  margin: 0; }
+
+.display {
+  position: absolute;
+  width: 100vw;
+  height: 100vh; }
+
 .layout {
   width: 800px;
   margin: auto; }
@@ -23,6 +31,7 @@
     position: absolute;
     margin: 3px; }
   .layout .header {
+    color: lime;
     width: 100%;
     border: 1px solid #000;
     padding: 20px;
@@ -54,7 +63,7 @@
         padding: 5px 10px 5px 10px;
         border-radius: 5px; }
     .layout .body .display {
-      width: 600px;
+      width: 61px;
       box-sizing: border-box;
       overflow: hidden;
       text-align: center;
@@ -144,9 +153,13 @@
   width: 500px;
   background: white;
   position: absolute;
-  margin: 10px;
   z-index: 2;
-  display: none; }
+  display: none;
+  pointer-events: all;
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  margin-left: -250px; }
   .openFileDialog .fileView {
     height: 300px;
     overflow-y: scroll;
@@ -172,6 +185,13 @@
     .openFileDialog .buttons .mybutton:last-child {
       margin: 0 20px 0 10px; }
 
+#app {
+  position: absolute;
+  z-index: 2;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none; }
+
 #saveFileDialog {
   box-shadow: 0 0 5px skyblue;
   position: absolute;
@@ -180,11 +200,12 @@
   z-index: 1;
   margin: 150px 0 0 50px;
   padding: 10px;
-  display: none; }
+  display: none;
+  pointer-events: all; }
   #saveFileDialog input {
     width: calc(100% - 40px);
     display: block;
-    margin: 0 20px 0 20px; }
+    margin: 0 20px 10px 20px; }
   #saveFileDialog .title {
     font-size: 1.5em;
     margin: 20px 0 5px 20px; }
@@ -291,7 +312,8 @@
   display: none; }
 
 .selectors {
-  font-size: 0; }
+  font-size: 0;
+  width: auto; }
   .selectors .selector {
     display: inline-block;
     margin: 5px 5px 5px 0;
@@ -384,7 +406,11 @@
     display: inline-block; }
 
 .control_board {
-  padding: 10px; }
+  background: white;
+  pointer-events: all;
+  position: absolute;
+  top: 180px;
+  left: 50%; }
 
 #valence-angle-controls .line {
   margin: 5px 0 5px 30px; }
@@ -533,5 +559,24 @@
     text-align: right; }
     #optimize-links .buttons input {
       min-width: 100px; }
+
+.leftPanel {
+  pointer-events: all;
+  background: white;
+  width: 200px; }
+
+.controlsPanel {
+  left: 50%;
+  margin-left: -240px;
+  pointer-events: all;
+  top: 70px;
+  position: absolute; }
+
+.documentList {
+  cursor: default; }
+  .documentList .document:hover {
+    background: lightgray; }
+  .documentList .document {
+    user-select: none; }
 
 /*# sourceMappingURL=molvi.css.map */

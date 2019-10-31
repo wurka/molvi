@@ -18,6 +18,12 @@
 
 </head>
 <body>
+    <div class="display" id="display"
+         onmouseleave="view.disableControls()"
+         onmouseenter="view.enableControls()"
+         onclick="MolviEngine.onMouseDown()"
+         onresize="console.log(1)"
+    ></div>
     {% csrf_token %}
     <div class="loading">
         <div class="image">
@@ -58,12 +64,17 @@
             <div class="save-mode">
                 <div class="line">
                     <span>Сохранить как:</span>
-                    <div class="selection selected" id="save-mol-file">.mol</div>
-                    <div class="selection" id="save-document">doc</div>
+                    <div class="selection" id="save-mol-file">.mol</div>
+                    <div class="selection selected" id="save-document">doc</div>
                 </div>
             </div>
-            <div class="title noselect">Введите имя файла для сохранения </div>
+            <div class="title noselect">Введите информацию о файле</div>
+            <span>Название файла</span>
             <input type="text" id="saveFileName" value="new_document">
+            <span>Описание документа</span>
+            <input type="text" name="description" id="saveFileDescription" placeholder="описание документа">
+            <span>Автор документа</span>
+            <input type="text" name="saveFileAuthor" id="saveFileAuthor" placeholder="имя автора" value="User">
             <div class="buttons noselect">
                 <div class="mybutton" onclick="view.enableControls(); engine.saveAction(); $('#saveFileDialog').hide();">OK</div>
                 <div class="mybutton" onclick="$('#saveFileDialog').hide(); view.enableControls()">Отмена</div>
@@ -71,8 +82,12 @@
         </div>
         <div id="openFileDialog" class="openFileDialog">
             <div class="title noselect">Список документов</div>
-            <div class="fileView">
-                <div class="file">... загрузка ...</div>
+            <div class="fileView documentList">
+                <div class="file">... загрузк списка документов ...</div>
+                <div v-for="document in documents" class="document"
+                    @dblclick="loadDocument(document.id)">
+                    𐅻 [[ document.name ]]r
+                </div>
             </div>
             <div class="buttons noselect">
                 <div class="mybutton" onclick="engine.openFileDialog_loadSelected()">OK</div>
@@ -94,151 +109,226 @@
             <span>MolVi: Molecula View</span>
             <span id="optimize-button">Optimize</span>
         </div>
+        <div class="leftPanel">
+            <div class="selectors">
+                <div class="selector" id="selectorAtoms" onclick="selectPanel('Atoms')" title="Список молекул">
+                    <img src="{% static 'editor/images/molecula-32.png' %}" alt="molecula.png">
+                </div>
+                <div class="selector" id="selectorLinks" onclick="selectPanel('Links')" title="Список связей">
+                    <img src="{% static 'editor/images/link-32.png' %}" alt="link.png">
+                </div>
+                <div class="selector" id="selectorDihedralAngles" onclick="selectPanel('DihedralAngles')" title="Список двугранных углов">
+                    <img src="{% static 'editor/images/dihedral-angle-32.png' %}" alt="dihedral-angles.png">
+                </div>
+                <div class="selector" id="selectorValenceAngles" onclick="selectPanel('ValenceAngles')" title="Список валентных углов">
+                    <img src="{% static 'editor/images/valence-angle-32.png' %}" alt="valence-angles.png">
+                </div>
+            </div>
+            <div class="atomsView viewPanel" id="panelAtoms">
+                <div v-for="(cluster, id) in clusters" class="clusterView">
+                    <div class="title">
+                        <span>[[cluster.caption]] </span><div style="text-decoration: underline" class='move' @click='openMoveControls([[id]])'>переместить</div>
+                    </div>
+                    <div class="moleculaData">
+                        <div v-for="atom_id in cluster.atoms" class="atomView" @click="engine.selectAtomById([[id]])" :id="'atomView_' + id">
+                            <div class="name t1-5">[[atoms[atom_id].name]]</div>
+                            <div class="id t1-5">[[atoms[atom_id].documentindex]]</div>
+                            <div class="devider"></div>
+                            <div class="x" contenteditable>x: x</div>
+                            <div class="y" contenteditable>y: y</div>
+                            <div class="z" contenteditable>z: z</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="linksHolder viewPanel" id="panelLinks">
+                <div class="linksView">
+                    <div v-for="(link, id) in links" class="link t1-5" id="link_0" @mouseover="selectLinkById(id)" @mouseout="unselectLinks()">
+                        <div class="line">
+                            <div class='text t1-5'>
+                                <span class="name">[[link.name]]</span>
+                            </div>
+                            <div class="change-length text t1-5" @click="openChangeLinkLengthPanel(id, link.value)"><img src="/static/editor/images/change-length.svg" alt="cl.png"></div>
+                            <div class="change-lengthcell text t1-5"
+                                 :onclick="'openLinkRotationPanel('+id+ ',' + links[id].atom1 +','+ links[id].atom2 + ')'"><img src="/static/editor/images/spin.svg" alt="lr.png"></div>
+                            <div class="deleteLink text t1-5" title="delete link" @click="deleteLink(id)">
+                                <img src="/static/editor/images/cross-20.png" alt="cross.png">
+                            </div>
+                        </div>
+                        <div class="line">
+                            <div class="current-value t1-5">[[link.value]]</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dihedralAngles viewPanel" id="panelDihedralAngles">
+                <div class="noDihedralAngles" v-if="dihedralAngles.length==0">
+                    Двугранных углов<br>ещё не создано
+                </div>
+                <div v-for="da in dihedralAngles" class="dihedralAngle">
+                    <div>[[ da.name ]]</div>
+                    <div @click="deleteDihedralAngle(da.id)">&times;</div>
+                    <div @click="optimizeDihedralAngle(da.id)">opt</div>
+                </div>
+                <div class="flat-button new-dihedral-angle-button"
+                     v-if="controlMode != 'dihedral creation'"
+                     onclick="dihedralAngleCreator.start()">Создать</div>
+                <div class="messages">
+                    <div class="title">Создание двугранного угла:</div>
+                    <div class="text">...</div>
+                    <div class="buttons">
+                        <div class="flat-button" onclick="dihedralAngleCreator.stop()">Отмена</div>
+                    </div>
+                </div>
+            </div>
+            <div class="valenceAngle viewPanel" id="panelValenceAngles">
+                <div class="buttons">
+                    <div class="flat-button" title="Построить автоматически список валентных угло" onclick="buildValenceAngles()">Построить</div>
+                </div>
+                <div class="valenceAnglesView">
+                    <div v-if="noValenceAngles">нет валентных углов</div>
+                    <div v-else>
+                        <div v-for="(va, va_id) in valenceAngles" class="valence-angle"
+                             v-on:mouseover="
+                                selectedAtomIds = [va.atom1, va.atom2, va.atom3];
+                                selectedLinkIds = [String(va.link1), String(va.link2)]">
+                            <div class="title">[[va.name]]</div>
+                            <div class="buttons">
+                                <div class="button deleteva" click="deleteValenceAngle([id])" title="Удалить"><img src="/static/editor/images/cross-20.png" alt="cross.png"></div>
+                                <div class="button editva" @click="editValenceAngle(va_id, va.value)" title="Изменить угол"><img src="/static/editor/images/pen.svg" alt="pen"></div>
+                            </div>
+                            <div class="value">[[va.value]]</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="linkRotation viewPanel" id="linkRotationPanel">
+                <input title="linkRotation_link" type="text" name="linkRotation_link">
+                <input title="linkRotation_atom1" type="text" name="linkRotation_atom1">
+                <input title="linkRotation_atom2" type="text" name="linkRotation_atom2">
+                <div class="line">
+                    <div class="name">Повернуть, град</div>
+                    <div class="value"><input title="градусов" type="text" name="linkRotation_degrees" id="linkRotationDegrees"></div>
+                </div>
+                <div class="line">Оставить неподвижным</div>
+                <div class="dont-moves">
+                    <div class="dont-move selected" onclick="linkRotationHighlight(1)">A1</div>
+                    <div class="dont-move" onclick="linkRotationHighlight(2)">A2</div>
+                </div>
+                <div class="buttons">
+                    <div class="flat-button" onclick="doLinkRotation()">OK</div>
+                    <div class="flat-button" onclick="closeLinkRotationPanel()">Отмена</div>
+                </div>
+            </div>
+        </div>
+        <div class="controlsPanel">
+            <div class="userControls">
+                <div class="modeIcon">
+                    <img src="{% static 'editor/images/rotate.png' %}" class="unselectedIcon" onclick="engine.rotateCluster()" id="icon_openPlusFile"/>
+                </div>
+                <div class="modeIcon">
+                    <img src="{% static 'editor/images/openfolder_doc.png' %}" class="unselectedIcon" onclick="view.openFileDialog('document')" id="icon_openPlusFile"/>
+                </div>
+                <div class="modeIcon">
+                    <img src="{% static 'editor/images/openfolder_mol.png' %}" class="unselectedIcon" onclick="view.openFileDialog('mol')" id="icon_openPlusFile"/>
+                </div>
+                <div class="modeIcon">
+                    <img src="{% static 'editor/images/openplus.png' %}" class="unselectedIcon" onclick="view.openFileDialog('plusmol')" id="icon_openFile"/>
+                </div>
+                <div class="modeIcon">
+                    <img src="{% static 'editor/images/save.png' %}" class="unselectedIcon" onclick="view.showSaveFileDialog()" id="icon_saveDocument" title="Сохранить документ"/>
+                </div>
+                <div class="modeIcon">
+                    <input type="text" name="" id="traceRange" onclick="document.getElementById(this.id).focus()" onkeydown="engine.autoTraceKeyPressed" onfocusout="view.enableControls()">
+                    <img src="{% static 'editor/images/autotrace.png' %}" class="unselectedIcon" onclick="engine.executeAutoTrace()" id="icon_autotraceUnselected"/>
+                </div>
+                <div class="modeIcon">
+                    <img src="{% static 'editor/images/linemode.png' %}" onclick="engine.startLinkCreationHtml()" class='modeIcon unselectedIcon' id='icon_modeLineUnselected'/>
+                </div>
+                <div class="modeIcon">
+                    <img src="{% static 'editor/images/linemode_selected.png' %}" class="modeIcon selectedIcon" onclick="engine.selectMode('none')" id='icon_modeLineSelected'/>
+                </div>
+            </div>
+        </div>
+
+        <div class="control_board">
+            <div class="controls control-link-length">
+                <div id="linkChangeLengthControls">
+                    <input type="hidden" name="linkChangeLengthId">
+                    <div class="title">Изменение длины связи</div>
+                    <div class="line">
+                        <div class="name">Текущая длина, ангстрем: </div>
+                        <span id="linkLengthOld">n/d</span>
+                        <div class="value"></div>
+                    </div>
+                    <div class="line">
+                        <div class="name">Новая длина, ангстрем:</div>
+                        <div class="value">
+                            <input type="text" name="linkLengthNew" value="1" id="linkLengthNewInput" title="Новая длина">
+                        </div>
+                    </div>
+                    <div class="buttons">
+                        <div class="flat-button" onclick="changeLinkLength()">OK</div>
+                        <div class="flat-button" onclick="closeControls()">Отмена</div>
+                    </div>
+                </div>
+            </div>
+            <div class="controls control-valence-angle">
+                <div id="valence-angle-controls">
+                    <div class="title">Изменить валентный угол</div>
+                    <input type="hidden" name="id" class="input-id" value="0">
+                    <div class="line">
+                        <div class="name">Текущее значение, град</div>
+                        <div class="value current-value">n/d</div>
+                    </div>
+                    <div class="line">
+                        <div class="name">Новое значение, град</div>
+                        <div class="value"><input type="text" title="Новое значение" class="input-angle"></div>
+                    </div>
+                    <div class="buttons">
+                        <div class="flat-button" onclick="doEditValenceAngle()">OK</div>
+                        <div class="flat-button" onclick="closeControls()">Отмена</div>
+                    </div>
+                </div>
+            </div>
+            <div class="controls control-cluster-position">
+                <div class="hidden" id="moveMoleculaId"></div>
+                <div class="title">Перемещение кластера</div>
+                <div class="line">
+                    <span>Ось Х, анкстрем: </span>
+                    <span onclick="engine.doMoleculaMove('x', 1)"> +1 </span>
+                    <span onclick="engine.doMoleculaMove('x', -1)"> -1 </span>
+                    <input type="text" title="x" id='moveControl_x' value="0">
+                </div>
+                <div class="line">
+                    <span>Ось Y, анкстрем: </span>
+                    <span onclick="engine.doMoleculaMove('y', 1)"> +1 </span>
+                    <span onclick="engine.doMoleculaMove('y', -1)"> -1 </span>
+                    <input type="text" title="y" id='moveControl_y' value="0">
+                </div>
+                <div class="line">
+                    <span>Ось Z, анкстрем: </span>
+                    <span onclick="engine.doMoleculaMove('z', 1)"> +1 </span>
+                    <span onclick="engine.doMoleculaMove('z', -1)"> -1 </span>
+                    <input type="text" title="z" id='moveControl_z' value="0">
+                </div>
+                <div class="buttons">
+                    <div class="flat-button" onclick="engine.doMoleculaMove('all')">OK</div>
+                    <div class="flat-button" onclick="closeControls()">Отмена</div>
+                </div>
+            </div>
+        </div>
+
         <div class="body">
             <div class="table">
                 <div class="row">
                     <div class="cell">
-                        <div class="selectors">
-                            <div class="selector" id="selectorAtoms" onclick="selectPanel('Atoms')" title="Список молекул">
-                                <img src="{% static 'editor/images/molecula-32.png' %}" alt="molecula.png">
-                            </div>
-                            <div class="selector" id="selectorLinks" onclick="selectPanel('Links')" title="Список связей">
-                                <img src="{% static 'editor/images/link-32.png' %}" alt="link.png">
-                            </div>
-                            <div class="selector" id="selectorDihedralAngles" onclick="selectPanel('DihedralAngles')" title="Список двугранных углов">
-                                <img src="{% static 'editor/images/dihedral-angle-32.png' %}" alt="dihedral-angles.png">
-                            </div>
-                            <div class="selector" id="selectorValenceAngles" onclick="selectPanel('ValenceAngles')" title="Список валентных углов">
-                                <img src="{% static 'editor/images/valence-angle-32.png' %}" alt="valence-angles.png">
-                            </div>
-                        </div>
-                        <div class="atomsView viewPanel" id="panelAtoms">
-                            <div v-for="(cluster, id) in clusters" class="clusterView">
-                                <div class="title">
-                                    <span>[[cluster.caption]] </span><div style="text-decoration: underline" class='move' @click='openMoveControls([[id]])'>переместить</div>
-                                </div>
-                                <div class="moleculaData">
-                                    <div v-for="atom_id in cluster.atoms" class="atomView" @click="engine.selectAtomById([[id]])" :id="'atomView_' + id">
-                                        <div class="name t1-5">[[atoms[atom_id].name]]</div>
-                                        <div class="id t1-5">[[atoms[atom_id].documentindex]]</div>
-                                        <div class="devider"></div>
-                                        <div class="x" contenteditable>x: x</div>
-                                        <div class="y" contenteditable>y: y</div>
-                                        <div class="z" contenteditable>z: z</div>
-                                    </div>
-                                </div>
-                            </div>
 
-                        </div>
-                        <div class="linksHolder viewPanel" id="panelLinks">
-                            <div class="linksView">
-                                <div v-for="(link, id) in links" class="link t1-5" id="link_0" @mouseover="selectLinkById(id)" @mouseout="unselectLinks()">
-                                    <div class="line">
-                                        <div class='text t1-5'>
-                                            <span class="name">[[link.name]]</span>
-                                        </div>
-                                        <div class="change-length text t1-5" @click="openChangeLinkLengthPanel(id, link.value)"><img src="/static/editor/images/change-length.svg" alt="cl.png"></div>
-                                        <div class="change-lengthcell text t1-5"
-                                             :onclick="'openLinkRotationPanel('+id+ ',' + links[id].atom1 +','+ links[id].atom2 + ')'"><img src="/static/editor/images/spin.svg" alt="lr.png"></div>
-                                        <div class="deleteLink text t1-5" title="delete link" @click="deleteLink(id)">
-                                            <img src="/static/editor/images/cross-20.png" alt="cross.png">
-                                        </div>
-                                    </div>
-                                    <div class="line">
-                                        <div class="current-value t1-5">[[link.value]]</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="dihedralAngles viewPanel" id="panelDihedralAngles">
-                            <div class="noDihedralAngles" v-if="dihedralAngles.length==0">
-                                Двугранных углов<br>ещё не создано
-                            </div>
-                            <div v-for="da in dihedralAngles" class="dihedralAngle">
-                                <div>[[ da.name ]]</div>
-                                <div @click="deleteDihedralAngle(da.id)">&times;</div>
-                                <div @click="optimizeDihedralAngle(da.id)">opt</div>
-                            </div>
-                            <div class="flat-button new-dihedral-angle-button"
-                                 v-if="controlMode != 'dihedral creation'"
-                                 onclick="dihedralAngleCreator.start()">Создать</div>
-                            <div class="messages">
-                                <div class="title">Создание двугранного угла:</div>
-                                <div class="text">...</div>
-                                <div class="buttons">
-                                    <div class="flat-button" onclick="dihedralAngleCreator.stop()">Отмена</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="valenceAngle viewPanel" id="panelValenceAngles">
-                            <div class="buttons">
-                                <div class="flat-button" title="Построить автоматически список валентных угло" onclick="buildValenceAngles()">Построить</div>
-                            </div>
-                            <div class="valenceAnglesView">
-                                <div v-if="noValenceAngles">нет валентных углов</div>
-                                <div v-else>
-                                    <div v-for="(va, va_id) in valenceAngles" class="valence-angle"
-                                         v-on:mouseover="
-                                            selectedAtomIds = [va.atom1, va.atom2, va.atom3];
-                                            selectedLinkIds = [String(va.link1), String(va.link2)]">
-                                        <div class="title">[[va.name]]</div>
-                                        <div class="buttons">
-                                            <div class="button deleteva" click="deleteValenceAngle([id])" title="Удалить"><img src="/static/editor/images/cross-20.png" alt="cross.png"></div>
-                                            <div class="button editva" @click="editValenceAngle(va_id, va.value)" title="Изменить угол"><img src="/static/editor/images/pen.svg" alt="pen"></div>
-                                        </div>
-                                        <div class="value">[[va.value]]</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <div class="linkRotation viewPanel" id="linkRotationPanel">
-                            <input title="linkRotation_link" type="text" name="linkRotation_link">
-                            <input title="linkRotation_atom1" type="text" name="linkRotation_atom1">
-                            <input title="linkRotation_atom2" type="text" name="linkRotation_atom2">
-                            <div class="line">
-                                <div class="name">Повернуть, град</div>
-                                <div class="value"><input title="градусов" type="text" name="linkRotation_degrees" id="linkRotationDegrees"></div>
-                            </div>
-                            <div class="line">Оставить неподвижным</div>
-                            <div class="dont-moves">
-                                <div class="dont-move selected" onclick="linkRotationHighlight(1)">A1</div>
-                                <div class="dont-move" onclick="linkRotationHighlight(2)">A2</div>
-                            </div>
-                            <div class="buttons">
-                                <div class="flat-button" onclick="doLinkRotation()">OK</div>
-                                <div class="flat-button" onclick="closeLinkRotationPanel()">Отмена</div>
-                            </div>
-                        </div>
                     </div>
                     <div class="cell">
-                        <div class="userControls">
-                            <div class="modeIcon">
-                                <img src="{% static 'editor/images/rotate.png' %}" class="unselectedIcon" onclick="engine.rotateCluster()" id="icon_openPlusFile"/>
-                            </div>
-                            <div class="modeIcon">
-                                <img src="{% static 'editor/images/openfolder_doc.png' %}" class="unselectedIcon" onclick="view.openFileDialog('document')" id="icon_openPlusFile"/>
-                            </div>
-                            <div class="modeIcon">
-                                <img src="{% static 'editor/images/openfolder_mol.png' %}" class="unselectedIcon" onclick="view.openFileDialog('mol')" id="icon_openPlusFile"/>
-                            </div>
-                            <div class="modeIcon">
-                                <img src="{% static 'editor/images/openplus.png' %}" class="unselectedIcon" onclick="view.openFileDialog('plusmol')" id="icon_openFile"/>
-                            </div>
-                            <div class="modeIcon">
-                                <img src="{% static 'editor/images/save.png' %}" class="unselectedIcon" onclick="view.showSaveFileDialog()" id="icon_saveDocument" title="Сохранить документ"/>
-                            </div>
-                            <div class="modeIcon">
-                                <input type="text" name="" id="traceRange" onclick="document.getElementById(this.id).focus()" onkeydown="engine.autoTraceKeyPressed" onfocusout="view.enableControls()">
-                                <img src="{% static 'editor/images/autotrace.png' %}" class="unselectedIcon" onclick="engine.executeAutoTrace()" id="icon_autotraceUnselected"/>
-                            </div>
-                            <div class="modeIcon">
-                                <img src="{% static 'editor/images/linemode.png' %}" onclick="engine.startLinkCreationHtml()" class='modeIcon unselectedIcon' id='icon_modeLineUnselected'/>
-                            </div>
-                            <div class="modeIcon">
-                                <img src="{% static 'editor/images/linemode_selected.png' %}" class="modeIcon selectedIcon" onclick="engine.selectMode('none')" id='icon_modeLineSelected'/>
-                            </div>
-                        </div>
                         <div id="infoMessageField">
                             <div id="infoMessage"> 
                                 <div id="infoMessageText">Привет, путник.</div>
@@ -266,82 +356,16 @@
                                 <div class="mybutton" onclick="engine.closeRotationHtml()">Oтмена</div>
                             </div>
                         </div>
-                        <div class="display" id="display"
+                        <!--<div class="display" id="display"
                              onmouseleave="view.disableControls()"
                              onmouseenter="view.enableControls()"
                              onclick="MolviEngine.onMouseDown()"
-                        ></div>
+                        ></div>-->
                     </div>
                 </div>
             </div>
             
-            <div class="control_board">
-                <div class="controls control-link-length">
-                    <div id="linkChangeLengthControls">
-                        <input type="hidden" name="linkChangeLengthId">
-                        <div class="title">Изменение длины связи</div>
-                        <div class="line">
-                            <div class="name">Текущая длина, ангстрем: </div>
-                            <span id="linkLengthOld">n/d</span>
-                            <div class="value"></div>
-                        </div>
-                        <div class="line">
-                            <div class="name">Новая длина, ангстрем:</div>
-                            <div class="value">
-                                <input type="text" name="linkLengthNew" value="1" id="linkLengthNewInput" title="Новая длина">
-                            </div>
-                        </div>
-                        <div class="buttons">
-                            <div class="flat-button" onclick="changeLinkLength()">OK</div>
-                            <div class="flat-button" onclick="closeControls()">Отмена</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="controls control-valence-angle">
-                    <div id="valence-angle-controls">
-                        <div class="title">Изменить валентный угол</div>
-                        <input type="hidden" name="id" class="input-id" value="0">
-                        <div class="line">
-                            <div class="name">Текущее значение, град</div>
-                            <div class="value current-value">n/d</div>
-                        </div>
-                        <div class="line">
-                            <div class="name">Новое значение, град</div>
-                            <div class="value"><input type="text" title="Новое значение" class="input-angle"></div>
-                        </div>
-                        <div class="buttons">
-                            <div class="flat-button" onclick="doEditValenceAngle()">OK</div>
-                            <div class="flat-button" onclick="closeControls()">Отмена</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="controls control-cluster-position">
-                    <div class="hidden" id="moveMoleculaId"></div>
-                    <div class="title">Перемещение кластера</div>
-                    <div class="line">
-                        <span>Ось Х, анкстрем: </span>
-                        <span onclick="engine.doMoleculaMove('x', 1)"> +1 </span>
-                        <span onclick="engine.doMoleculaMove('x', -1)"> -1 </span>
-                        <input type="text" title="x" id='moveControl_x' value="0">
-                    </div>
-                    <div class="line">
-                        <span>Ось Y, анкстрем: </span>
-                        <span onclick="engine.doMoleculaMove('y', 1)"> +1 </span>
-                        <span onclick="engine.doMoleculaMove('y', -1)"> -1 </span>
-                        <input type="text" title="y" id='moveControl_y' value="0">
-                    </div>
-                    <div class="line">
-                        <span>Ось Z, анкстрем: </span>
-                        <span onclick="engine.doMoleculaMove('z', 1)"> +1 </span>
-                        <span onclick="engine.doMoleculaMove('z', -1)"> -1 </span>
-                        <input type="text" title="z" id='moveControl_z' value="0">
-                    </div>
-                    <div class="buttons">
-                        <div class="flat-button" onclick="engine.doMoleculaMove('all')">OK</div>
-                        <div class="flat-button" onclick="closeControls()">Отмена</div>
-                    </div>
-                </div>
-            </div>
+
         </div>
     </div>
     <div id="errorMessage"></div>

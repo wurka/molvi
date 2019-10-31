@@ -34,7 +34,8 @@ let app = new Vue({
         dihedralAngles: [],  // список двугранных углов
         documentName: "new document",
         selectedAtomIds: [],
-        selectedLinkIds: []
+        selectedLinkIds: [],
+        documents: [{}, {}, {}]
     },
     computed: {
         noValenceAngles: function () {
@@ -42,6 +43,17 @@ let app = new Vue({
         }
     },
     methods: {
+        loadDocument: (did)=>{
+            $.ajax({
+                method: "POST",
+                data: {
+                    "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val(),
+                    "id": did
+                },
+                success() {alert("OLK")},
+                error() {alert("Not ok")}
+            })
+        },
         selectOption(optionId) {
             console.log(optionId);
             app.optimisers.forEach((opt)=>{
@@ -380,7 +392,13 @@ class MolviEngine {
                 console.error(data);
             },
             success: function (data) {
-                var html = "",
+                let x = JSON.parse(data);
+                console.log(x);
+                app.documents = [];
+                x.forEach((item)=>{
+                    app.documents.push(item);
+                });
+                /*var html = "",
                     htmlChunk = "<div class=\"file\" id='[+id]' onclick='$(\"#openFIleDialog>.fileView>.file\").removeClass(\"selected\"); $(this).toggleClass(\"selected\")' ondblclick='$(\"#openFileDialog .mybutton:first-child\").click()'>[+content]</div>",
                     dict = JSON.parse(data);
 
@@ -393,7 +411,7 @@ class MolviEngine {
                 }
 
 
-                $("#openFileDialog>.fileView").html(html);
+                $("#openFileDialog>.fileView").html(html);*/
             }
         });
     }
@@ -1470,6 +1488,24 @@ class MolviEngine {
         })
     }
     saveDocumentToServer() {
+        // saving active document at server side
+        let name = $("#saveFileName").val(),
+            details = $("#saveFileDescription").val(),
+            author = $("#saveFileAuthor").val();
+
+        $.ajax({
+            url: "/editor/save-active-doc",
+            method: "POST",
+            success(data) {
+                console.log(data);
+            },
+            error(data){
+                console.warn(data.responseText);
+            }
+        });
+
+
+        return;
         let mydoc = {
             "documentName": $("#saveFileName").val(),
             "clusters": [],
@@ -1591,7 +1627,7 @@ class MolviView {
 
     init() {
         "use strict";
-        this.initGL("display", 600, 600);
+        this.initGL("display", window.innerWidth, window.innerHeight);
         this.buildScene();
         MolviView.paintGL();
     }
@@ -2128,4 +2164,13 @@ $(document).ready(function(){
     $("#optimize-button").click(()=>{
         app.openOptimisation();
     });
+
+    window.addEventListener("resize", ()=>{
+            let width = $("#display").width(),
+                height = $("#display").height();
+            $("#display canvas").width($("#display").width());
+            view.camera.aspect = width / height;
+            view.camera.updateProjectionMatrix();
+            view.renderer.setSize(width, height);
+        }, false);
 });
