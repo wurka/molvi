@@ -51,4 +51,8 @@ urlpatterns = [
 	path('optimize', optimizer.optimize),  # оптимизировать молекулу по энергии
 	path('get-optimise-sources', optimizer.get_optimise_sources),
 	path('save-atoms-to-file', views2.save_atoms_to_file),
+
+	path('save-active-doc', views2.save_active_doc),
+	path('load-document', views2.load_document),
+	path('delete-document', views2.delete_document),
 ]

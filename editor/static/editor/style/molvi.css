@@ -576,7 +576,29 @@ body {
   cursor: default; }
   .documentList .document:hover {
     background: lightgray; }
+    .documentList .document:hover .documentDelete {
+      display: block; }
   .documentList .document {
     user-select: none; }
+  .documentList .documentDetails {
+    color: gray; }
+  .documentList .documentNameBox {
+    display: flex; }
+    .documentList .documentNameBox .documentName {
+      flex-grow: 1; }
+    .documentList .documentNameBox .documentDelete {
+      background: transparent; }
+    .documentList .documentNameBox .documentDelete:hover {
+      content: url("/static/editor/images/circ1.svg");
+      width: 20px;
+      height: 20px; }
+    .documentList .documentNameBox .documentDelete:active {
+      transform: rotate(30deg); }
+
+.busyPanel {
+  background: white;
+  position: absolute;
+  bottom: 0;
+  width: 100vw; }
 
 /*# sourceMappingURL=molvi.css.map */

@@ -615,7 +615,31 @@ body
 
 .documentList
   cursor: default
+  //.documentDelete
+    // display: none
   .document:hover
     background: lightgray
+    .documentDelete
+      display: block
   .document
     user-select: none
+  .documentDetails
+    color: gray
+  .documentNameBox
+    display: flex
+    .documentName
+      flex-grow: 1
+    .documentDelete
+      background: transparent
+    .documentDelete:hover
+      content: url("/static/editor/images/circ1.svg")
+      width: 20px
+      height: 20px
+    .documentDelete:active
+      transform: rotate(30deg)
+
+.busyPanel
+  background: white
+  position: absolute
+  bottom: 0
+  width: 100vw

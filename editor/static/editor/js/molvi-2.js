@@ -35,7 +35,9 @@ let app = new Vue({
         documentName: "new document",
         selectedAtomIds: [],
         selectedLinkIds: [],
-        documents: [{}, {}, {}]
+        documents: [{}, {}, {}],
+        busyText: "busy text",
+        busy: true,
     },
     computed: {
         noValenceAngles: function () {
@@ -43,6 +45,14 @@ let app = new Vue({
         }
     },
     methods: {
+        showBusy: (text)=>{
+            app.busyText = text;
+            app.busy = true;
+        },
+        hideBusy: ()=>{
+            app.busyText = "";
+            app.busy = false;
+        },
         loadDocument: (did)=>{
             $.ajax({
                 method: "POST",
@@ -50,8 +60,28 @@ let app = new Vue({
                     "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val(),
                     "id": did
                 },
-                success() {alert("OLK")},
-                error() {alert("Not ok")}
+                success() {
+                    console.log("document loaded: " + did);
+                    view.closeOpenFileDialog();
+                    window.location.reload();
+                },
+                error() { alert("Не удалось загрузить документ"); }
+            })
+        },
+        deleteDocument: (did) => {
+            app.showBusy("Удаление документа");
+            $.ajax({
+                url: "/molvi/delete-document",
+                method: "POST",
+                data: {
+                    "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val(),
+                    "id": did
+                },
+                success() { app.hideBusy(); },
+                error(data) {
+                    alert("Ошибка при удалении документа: " + data.responseText);
+                    app.hideBusy();
+                }
             })
         },
         selectOption(optionId) {
@@ -1494,13 +1524,20 @@ class MolviEngine {
             author = $("#saveFileAuthor").val();
 
         $.ajax({
-            url: "/editor/save-active-doc",
+            url: "/molvi/save-active-doc",
             method: "POST",
+            data: {
+                "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val(),
+                "name": $("#saveFileName").val(),
+                "details": $("#saveFileDetails").val(),
+                "creator": $("#saveFileCreator").val()
+            },
             success(data) {
                 console.log(data);
             },
             error(data){
                 console.warn(data.responseText);
+                alert(data.responseText);
             }
         });
 

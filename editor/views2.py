@@ -178,6 +178,11 @@ def save_active_doc(request):
 	except Document.DoesNotExist:
 		return HttpResponse("There is no active document", status=500)
 
+	# проверка имени на уникальность
+	docs = Document.objects.filter(name=request.POST["name"])
+	if len(docs) > 0:
+		return HttpResponse("Document with this name already exists", status=500)
+
 	newdoc = Document.objects.create(
 		is_active=False, creator=request.POST["creator"],
 		details=request.POST['details'], name=request.POST['name'])
@@ -189,56 +194,56 @@ def save_active_doc(request):
 	for cluster in clusters:
 		newcluster = Cluster.objects.create(
 			document=newdoc,
-			caption=adoc.caption
+			caption=cluster.caption
 		)
 		# атомы
 		atoms = ClusterAtom.objects.filter(cluster=cluster)
 		for atom in atoms:
 			newatom = Atom.objects.create(
 				document=newdoc,
-				x=atom.x,
-				y=atom.y,
-				z=atom.z,
-				name=atom.name,
-				color=atom.color,
-				mass=atom.mass,
-				radius=atom.radius,
-				molfile=atom.molfile,
-				molfileindex=atom.molfileindex,
-				documentindex=atom.documentindex,
-				mentableindex=atom.mentableindex,
-				valence=atom.valence
+				x=atom.atom.x,
+				y=atom.atom.y,
+				z=atom.atom.z,
+				name=atom.atom.name,
+				color=atom.atom.color,
+				mass=atom.atom.mass,
+				radius=atom.atom.radius,
+				molfile=atom.atom.molfile,
+				molfileindex=atom.atom.molfileindex,
+				documentindex=atom.atom.documentindex,
+				mentableindex=atom.atom.mentableindex,
+				valence=atom.atom.valence
 			)
-			old2new_atoms[atom.id] = newatom.id
+			old2new_atoms[atom.atom.id] = newatom.id
 			ClusterAtom.objects.create(
 				atom=newatom,
 				cluster=newcluster
 			)
 
-		# связи
-		old2new_links = dict()
-		links = Link.objects.filter(document=adoc)
-		for link in links:
-			newlink = Link.objects.create(
-				document=newdoc,
-				atom1=Atom.objects.get(id=old2new_atoms[link.atom1.id]),
-				atom2=Atom.objects.get(id=old2new_atoms[link.atom2.id])
-			)
-			old2new_links[link.id] = newlink.id
+	# связи
+	old2new_links = dict()
+	links = Link.objects.filter(document=adoc)
+	for link in links:
+		newlink = Link.objects.create(
+			document=newdoc,
+			atom1=Atom.objects.get(id=old2new_atoms[link.atom1.id]),
+			atom2=Atom.objects.get(id=old2new_atoms[link.atom2.id])
+		)
+		old2new_links[link.id] = newlink.id
 
-		# двугранные углы
-		dh_angles = DihedralAngle.objects.filter(document=adoc)
-		for dh_angle in dh_angles:
-			new_dh_angle = DihedralAngle.objects.create(
-				name=dh_angle.name,
-				document=newdoc
+	# двугранные углы
+	dh_angles = DihedralAngle.objects.filter(document=adoc)
+	for dh_angle in dh_angles:
+		new_dh_angle = DihedralAngle.objects.create(
+			name=dh_angle.name,
+			document=newdoc
+		)
+		dh_angle_links = DihedralAngleLink.objects.filter(angle=dh_angle)
+		for dh_angle_link in dh_angle_links:
+			DihedralAngleLink.objects.create(
+				angle=new_dh_angle,
+				link=Link.objects.get(id=old2new_links[dh_angle_link.link.id])
 			)
-			dh_angle_links = DihedralAngleLink.objects.filter(angle=dh_angle)
-			for dh_angle_link in dh_angle_links:
-				DihedralAngleLink.objects.create(
-					angle=new_dh_angle,
-					link=Link.objects.get(id=old2new_links[dh_angle_link.link.id])
-				)
 
 	return HttpResponse("OK")
 
@@ -351,5 +356,20 @@ def load_document(request):
 				angle=new_dh_angle,
 				link=Link.objects.get(id=old2new_links[dha_link.link.id])
 			)
+
+	return HttpResponse("OK")
+
+
+@post_with_parameters("id")
+def delete_document(request):
+	try:
+		doc = Document.objects.get(id=request.POST["id"])
+	except Document.DoesNotExist:
+		return HttpResponse(f"there is no document with id {request.POST['id']}", status=500)
+
+	# cluster
+	clusters = Cluster.objects.filter(document=doc)
+	for cluster in clusters:
+		cluster.delete()
 
 	return HttpResponse("OK")

@@ -356,7 +356,7 @@ def get_documents(request):
 	doc_list = list()
 	try:
 		for doc in docs:
-			doc_list.append({"id": doc.id, "name": doc.name})
+			doc_list.append({"id": doc.id, "name": doc.name, "details": doc.details, "creator": doc.creator})
 		ans = json.dumps(doc_list)
 	except Exception as e:
 		return HttpResponse("Error: " + str(e), status=500)
