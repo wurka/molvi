@@ -18,6 +18,7 @@ from django.urls import path  # , include
 from . import views
 from . import optimizer
 from . import views2
+from . import views_dx2
 
 urlpatterns = [
 	path('molvi.html', views.main_page),
@@ -55,4 +56,8 @@ urlpatterns = [
 	path('save-active-doc', views2.save_active_doc),
 	path('load-document', views2.load_document),
 	path('delete-document', views2.delete_document),
+
+	path('get-cwd', views_dx2.get_cwd),
+	path('dx2/save-calibration', views_dx2.save_calibration),
+	path('dx2/get-energy', views_dx2.get_energy),
 ]

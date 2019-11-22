@@ -643,3 +643,63 @@ body
   position: absolute
   bottom: 0
   width: 100vw
+
+.atomsView
+  .title
+    display: flex
+.menu
+  //display: inline-block
+  flex-grow: 1
+  text-align: right
+  margin-top: 5px
+  .bars
+    opacity: 0.4
+    display: inline-block
+    font-size: 0
+    border: 1px solid transparent
+    transition: 0.3s
+    &:hover
+      opacity: 0.8
+    .bar
+      display: inline-block
+      width: 10px
+      height: 10px
+      border-radius: 10px
+      background: #5be3ff
+      transition: 0.3s
+      margin-right: 1px
+    &:active
+      border: 1px solid lightgray
+      .bar
+        border-radius: 0
+        margin-right: 0
+        width: 11px
+  .menuItems
+    z-index: 2
+    background: white
+    border: 1px solid #6c6c6c
+    display: none
+    position: absolute
+    cursor: default
+    user-select: none
+    .menuItems__item
+      color: #6c6c6c
+      &:hover
+        color: black
+        background: lightgray
+      &:active
+        background: #6c6c6c
+        color: white
+
+  &.opened
+    .bars
+      opacity: 1.0
+    .bar
+      border-radius: 0
+      margin-right: 0
+      width: 11px
+    .menuItems
+      display: block
+
+
+

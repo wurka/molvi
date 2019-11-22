@@ -45,6 +45,31 @@ let app = new Vue({
         }
     },
     methods: {
+        dx2_calibrate(id){
+            $.ajax({
+                url: "/molvi/dx2/save-calibration",
+                method: "POST",
+                data: {
+                    "id": id,
+                    "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val()
+                },
+                success(data){
+                    console.log(data);
+                },
+                error(data){
+                    alert(data.responseText);
+                }
+            })
+        },
+        dx2_getEnergy(id){
+            $.ajax({
+                url: "/molvi/dx2/get-energy",
+                method: "GET",
+                data: {"id": id},
+                success(data) {console.log(data);},
+                error(data) {alert(data.responseText);},
+            })
+        },
         showBusy: (text)=>{
             app.busyText = text;
             app.busy = true;
@@ -277,7 +302,11 @@ let app = new Vue({
                     document.body.innerHTML = data.responseText;
                 }
             })
-        }
+        },
+        toggleMenu(e) {
+            let target = e.currentTarget;
+            $(target).toggleClass("opened");
+        },
     },
     watch: {
         atoms: function(newAtoms) {
@@ -2192,7 +2221,7 @@ $(document).ready(function(){
     engine.LoadAtomDataFromServer(true);
 
 
-    selectPanel("DihedralAngles");
+    selectPanel("Atoms");
 
     console.log(htmlLabels.createLabel());
 
@@ -2210,4 +2239,9 @@ $(document).ready(function(){
             view.camera.updateProjectionMatrix();
             view.renderer.setSize(width, height);
         }, false);
+
+    //щелчок в любом месте
+    window.addEventListener("click", ()=>{
+        $(".menu").removeClass("opened");
+    })
 });

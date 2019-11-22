@@ -38,5 +38,21 @@ def save_calibration(request):
 
 
 @get_with_parameters("id")
-def get_dx2_energy(request):
+def get_energy(request):
     cid = request.GET['id']
+    try:
+        cluster = Cluster.objects.get(id=cid)
+    except Cluster.DoesNotExist:
+        return HttpResponse(f"there si no Cluster with id {cid}", status=500)
+
+    cluster_atoms = ClusterAtom.objects.filter(cluster=cluster)
+    mols = [ca.atom.molfile for ca in cluster_atoms]
+    if len(mols) == 0:
+        return HttpResponse("there is no mol files associated with cluster", status=500)
+    for i, item in enumerate(mols[:-1]):
+        if item.id != mols[i+1].id:
+            return HttpResponse("multiply mol files detected inside one cluster", status=500)
+
+    text = mols[0].text
+
+    return HttpResponse(text)
