@@ -1,6 +1,8 @@
 "use strict";
+/* global __count__ */
 //import getCookie from "mycookie";
 //import * as THREE from "./three";
+
 function count(obj) {
     if (obj.__count__ !== undefined) { // Old FF
         return obj.__count__;
@@ -191,8 +193,8 @@ let app = new Vue({
             $(".controls").hide();
         },
         openMoveControls(clusterId){
-            console.log("open move for: " + clusterId);
             "use strict";
+            console.log("open move for: " + clusterId);
 
             $("#moveMoleculaId").html(clusterId);
             $('#moleculaMoveControls').show();
