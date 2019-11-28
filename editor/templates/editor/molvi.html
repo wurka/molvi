@@ -17,13 +17,40 @@
     <script src="{% static 'editor/js/mycookie.js' %}"></script>
 </head>
 <body>
+    <!--onmouseleave="view.disableControls()"
+    onmouseenter="view.enableControls()"-->
     <div class="display" id="display"
-         onmouseleave="view.disableControls()"
-         onmouseenter="view.enableControls()"
          onclick="MolviEngine.onMouseDown()"
          onresize="console.log(1)"
     ></div>
     {% csrf_token %}
+    <div class="message-boxes">
+        <div id="infoMessageField">
+            <div id="infoMessage">
+                <div id="infoMessageText">Привет, путник.</div>
+                <div class="buttons" id="infoCloseButton" onclick='engine.userMessage()'>close</div>
+            </div>
+        </div>
+        <div id="transformRotate">
+            <input type="hidden" name="rotateOrigin" id="rotateOrigin" class="origin">
+            <div class="title">Укажите величину поворота</div>
+            <div>
+                <div class="dx">
+                    <label for="tr_dx">Вокруг оси Х</label><input id="tr_dx"><label for="tr_dx">, град</label>
+                </div>
+                <div class="dy">
+                    <label for="tr_dy">Вокруг оси Y</label><input id="tr_dy"><label for="tr_dy">, град</label>
+                </div>
+                <div class="dz">
+                    <label for="tr_dz">Вокруг оси Z</label><input id="tr_dz"><label for="tr_dz">, град</label>
+                </div>
+            </div>
+            <div class="buttons">
+                <div class="mybutton" onclick="engine.rotateClusterFromHtml()">OK</div>
+                <div class="mybutton" onclick="engine.closeRotationHtml()">Oтмена</div>
+            </div>
+        </div>
+    </div>
     <div class="loading">
         <div class="image">
             <img width="100" height="100" src="{% static 'editor/images/loading.gif' %}" alt="loading image">
@@ -353,33 +380,10 @@
 
                     </div>
                     <div class="cell">
-                        <div id="infoMessageField">
-                            <div id="infoMessage"> 
-                                <div id="infoMessageText">Привет, путник.</div>
-                                <div class="buttons" id="infoCloseButton" onclick='engine.userMessage()'>close</div>
-                            </div>                            
-                        </div>
+
                         <!-- delete me if you find it after 13-10-2018 -->
 
-                        <div id="transformRotate">
-                            <input type="hidden" name="rotateOrigin" id="rotateOrigin" class="origin">
-                            <div class="title">Укажите величину поворота</div>
-                            <div>
-                                <div class="dx">
-                                    <label for="tr_dx">Вокруг оси Х</label><input id="tr_dx"><label for="tr_dx">, град</label>
-                                </div>
-                                <div class="dy">
-                                    <label for="tr_dy">Вокруг оси Y</label><input id="tr_dy"><label for="tr_dy">, град</label>
-                                </div>
-                                <div class="dz">
-                                    <label for="tr_dz">Вокруг оси Z</label><input id="tr_dz"><label for="tr_dz">, град</label>
-                                </div>
-                            </div>
-                            <div class="buttons">
-                                <div class="mybutton" onclick="engine.rotateClusterFromHtml()">OK</div>
-                                <div class="mybutton" onclick="engine.closeRotationHtml()">Oтмена</div>
-                            </div>
-                        </div>
+
                         <!--<div class="display" id="display"
                              onmouseleave="view.disableControls()"
                              onmouseenter="view.enableControls()"

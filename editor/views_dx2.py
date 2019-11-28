@@ -81,15 +81,17 @@ def get_energy(request):
 	for i, atom in enumerate(atoms):  # цикл по всем атомам
 		for j, atom2 in enumerate(atoms):  # по всем парам атомов
 			try:
-				f = zmatrix[i, j]
+				f = zmatrix[i*3, j*3]
 				original = calibration[i]["x"] - calibration[j]["x"]
 				new = atom.atom.x - atom2.atom.x
 				e += f*(new - original)**2
 
+				f = zmatrix[i * 3 + 1, j * 3 + 1]
 				original = calibration[i]["y"] - calibration[j]["y"]
 				new = atom.atom.y - atom2.atom.y
 				e += f * (new - original) ** 2
 
+				f = zmatrix[i * 3 + 2, j * 3 + 2]
 				original = calibration[i]["z"] - calibration[j]["z"]
 				new = atom.atom.z - atom2.atom.z
 				e += f * (new - original) ** 2
