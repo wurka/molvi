@@ -192,11 +192,11 @@ body
 
 #saveFileDialog
   box-shadow: 0 0 5px skyblue
-  position: absolute
+  position: relative
   background: white
   width: 600px
   z-index: 1
-  margin: 150px 0 0 50px
+  margin: 150px auto 0 auto
   padding: 10px
   display: none
   pointer-events: all
@@ -715,3 +715,44 @@ body
       border-radius: 5px
       pointer-events: all
 
+.splash-screen
+  font-family: Consolas, Arial, monospace
+  font-size: 10em
+  color: white
+  background: black
+  position: absolute
+  z-index: 100
+  top: 0
+  left: 0
+  width: 100vw
+  height: 100vh
+  padding-top: 30vh
+  text-align: center
+
+.error-box
+  display: none
+  pointer-events: all
+  position: relative
+  border: 1px solid red
+  background: black
+  border-radius: 5px
+  width: 300px
+  padding: 35px
+  z-index: 10
+  margin: 35vh auto
+  color: red
+  cursor: default
+  user-select: none
+
+  .button
+    position: absolute
+    bottom: 10px
+    right: 10px
+    text-decoration: underline
+    cursor: default
+    border-radius: 5px
+    padding: 5px
+    &:hover
+      background: rgba(255,160,171, 0.4)
+    &:active
+      background: radial-gradient(circle, rgba(255,255,255,0.6) 0%, rgba(255,160,171,0.6) 100%)

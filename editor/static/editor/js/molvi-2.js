@@ -22,6 +22,21 @@ function count(obj) {
     return c;
 }
 
+let messageApp = new Vue({
+    el: "#message-boxes",
+    delimiters: ['[[',']]'],
+    methods: {
+        // messages, message-boxes
+        showError(errorText) {
+            $(".message-boxes .error-box .error-text").html(errorText);
+            $(".message-boxes .error-box").fadeIn();
+        },
+        closeError() {
+            $(".message-boxes .error-box").fadeOut();
+        }
+    }
+});
+
 let app = new Vue({
     el: '#app',
     delimiters: ["[[", "]]"],
@@ -82,6 +97,7 @@ let app = new Vue({
         },
         loadDocument: (did)=>{
             $.ajax({
+                url: "/molvi/load-document",
                 method: "POST",
                 data: {
                     "csrfmiddlewaretoken": $("input[name=csrfmiddlewaretoken]").val(),
@@ -325,6 +341,8 @@ let app = new Vue({
 
     }
 });
+
+
 
 function loading_display(ison) {
     if (ison) {
@@ -968,7 +986,7 @@ class MolviEngine {
                     engine.LoadAtomDataFromServer(true);
                 },
                 error: function (data) {
-                    console.error("error while link creation: " + data.responseText);
+                    messageApp.showError("Ошибка при создании связи: " + data.responseText);
                 }
             });
 
@@ -1027,6 +1045,7 @@ class MolviEngine {
             },
             complete: function () {
                 loading_display(false);
+                $(".splash-screen").fadeOut(412);
             }
         })
     }
@@ -1050,7 +1069,9 @@ class MolviEngine {
         if (clear) {
             doc.selectedAtomIds = [];
         }
-        doc.selectedAtomIds.push(id);
+        if (!doc.selectedAtomIds.includes(id)) {
+            doc.selectedAtomIds.push(id);
+        }
         engine.build3DFromDoc();
     }
 
@@ -1767,7 +1788,7 @@ class MolviView {
         view.scene.add(this.lightGroup);
 
         //добавить вспомогательные элементы
-        let helper = new THREE.AxesHelper(22),
+        let helper = new THREE.AxesHelper(5),
             grid = new THREE.GridHelper(10, 10);
         view.helpGroup.add(grid);
         view.helpGroup.add(helper);

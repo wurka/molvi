@@ -101,7 +101,7 @@ function highlightLink(index){
 function addLight() {
     scene.add(light1);
     scene.add(light2);
-    var helper = new THREE.AxesHelper(22);
+    var helper = new THREE.AxesHelper(5);
     var grid = new THREE.GridHelper(10, 10);
     scene.add(grid);
     scene.add(helper);
@@ -118,7 +118,7 @@ function buildScene(){
     scene.add(lightGroup);
 
     //добавить вспомогательные элементы
-    var helper = new THREE.AxesHelper(22),
+    var helper = new THREE.AxesHelper(5),
         grid = new THREE.GridHelper(10, 10);
     helpGroup = new THREE.Group();
     helpGroup.name = "helpGroup";

@@ -1439,7 +1439,7 @@
 			var n31 = te[ 2 ], n32 = te[ 6 ], n33 = te[ 10 ], n34 = te[ 14 ];
 			var n41 = te[ 3 ], n42 = te[ 7 ], n43 = te[ 11 ], n44 = te[ 15 ];
 
-			//TODO: make this more efficient
+			//make this more efficient
 			//( based on http://www.euclideanspace.com/maths/algebra/matrix/functions/inverse/fourD/index.htm )
 
 			return (
@@ -2974,7 +2974,7 @@
 
 		},
 
-		// TODO lengthSquared?
+		// lengthSquared?
 
 		lengthSq: function () {
 
@@ -3789,7 +3789,7 @@
 
 			if ( this.image !== undefined ) {
 
-				// TODO: Move to THREE.Image
+				//  Move to THREE.Image
 
 				var image = this.image;
 
@@ -5993,7 +5993,7 @@
 				groundColor: {}
 			} },
 
-			// TODO (abelnation): RectAreaLight BRDF data needs to be moved from example to main src
+			// (abelnation): RectAreaLight BRDF data needs to be moved from example to main src
 			rectAreaLights: { value: [], properties: {
 				color: {},
 				position: {},
@@ -7295,7 +7295,7 @@
 			if ( this.visible === false ) data.visible = false;
 			if ( JSON.stringify( this.userData ) !== '{}' ) data.userData = this.userData;
 
-			// TODO: Copied from Object3D.toJSON
+			//  Copied from Object3D.toJSON
 
 			function extractFromCache( cache ) {
 
@@ -8829,7 +8829,7 @@
 
 			if ( lights.length === 0 ) return;
 
-			// TODO Clean up (needed in case of contextlost)
+			// Clean up (needed in case of contextlost)
 			var _gl = _renderer.context;
 			var _state = _renderer.state;
 
@@ -15952,7 +15952,7 @@
 
 				planeMesh.material.map = background;
 
-				// TODO Push this to renderList
+				// Push this to renderList
 
 				renderer.renderBufferDirect( planeCamera, null, planeMesh.geometry, planeMesh.material, planeMesh, null );
 
@@ -16425,7 +16425,7 @@
 
 			delete geometries[ geometry.id ];
 
-			// TODO Remove duplicate code
+			// Remove duplicate code
 
 			var attribute = wireframeAttributes[ geometry.id ];
 
@@ -18265,7 +18265,7 @@
 
 			} else {
 
-				// FIXME: We don't support !depth !stencil
+				//  We don't support !depth !stencil
 				_gl.renderbufferStorage( _gl.RENDERBUFFER, _gl.RGBA4, renderTarget.width, renderTarget.height );
 
 			}
@@ -20005,7 +20005,7 @@
 			cameraL.matrixWorldInverse.fromArray( frameData.leftViewMatrix );
 			cameraR.matrixWorldInverse.fromArray( frameData.rightViewMatrix );
 
-			// TODO (mrdoob) Double check this code
+			// (mrdoob) Double check this code
 
 			standingMatrixInverse.getInverse( standingMatrix );
 
@@ -20541,7 +20541,7 @@
 							position: new Vector3(),
 							halfWidth: new Vector3(),
 							halfHeight: new Vector3()
-							// TODO (abelnation): set RectAreaLight shadow uniforms
+							// (abelnation): set RectAreaLight shadow uniforms
 						};
 						break;
 
@@ -20706,7 +20706,7 @@
 					uniforms.halfWidth.applyMatrix4( matrix42 );
 					uniforms.halfHeight.applyMatrix4( matrix42 );
 
-					// TODO (abelnation): RectAreaLight distance?
+					// (abelnation): RectAreaLight distance?
 					// uniforms.distance = distance;
 
 					state.rectArea[ rectAreaLength ] = uniforms;
@@ -21748,7 +21748,7 @@
 
 						var attribute = attributes.get( geometryAttribute );
 
-						// TODO Attribute may not be available on context restore
+						// Attribute may not be available on context restore
 
 						if ( attribute === undefined ) continue;
 
@@ -22091,7 +22091,7 @@
 		};
 
 		/*
-		// TODO Duplicated code (Frustum)
+		// Duplicated code (Frustum)
 
 		var _sphere = new Sphere();
 
@@ -22466,7 +22466,7 @@
 				uniforms.spotShadowMatrix.value = lights.state.spotShadowMatrix;
 				uniforms.pointShadowMap.value = lights.state.pointShadowMap;
 				uniforms.pointShadowMatrix.value = lights.state.pointShadowMatrix;
-				// TODO (abelnation): add area lights shadow info to uniforms
+				// (abelnation): add area lights shadow info to uniforms
 
 			}
 
@@ -22775,7 +22775,7 @@
 				}
 
 				// RectAreaLight Texture
-				// TODO (mrdoob): Find a nicer implementation
+				// (mrdoob): Find a nicer implementation
 
 				if ( m_uniforms.ltc_1 !== undefined ) m_uniforms.ltc_1.value = UniformsLib.LTC_1;
 				if ( m_uniforms.ltc_2 !== undefined ) m_uniforms.ltc_2.value = UniformsLib.LTC_2;
@@ -23275,7 +23275,7 @@
 				}
 
 				// currently relying on the fact that WebGLRenderTargetCube.texture is a Texture and NOT a CubeTexture
-				// TODO: unify these code paths
+				// unify these code paths
 				if ( ( texture && texture.isCubeTexture ) ||
 					( Array.isArray( texture.image ) && texture.image.length === 6 ) ) {
 
@@ -32882,7 +32882,7 @@
 
 		moveTo: function ( x, y ) {
 
-			this.currentPoint.set( x, y ); // TODO consider referencing vectors instead of copying?
+			this.currentPoint.set( x, y ); // consider referencing vectors instead of copying?
 
 		},
 
@@ -36419,7 +36419,7 @@
 				// parse implicit morph animations
 				if ( geometry.morphTargets ) {
 
-					// TODO: Figure out what an appropraite FPS is for morph target animations -- defaulting to 10, but really it is completely arbitrary.
+					// Figure out what an appropraite FPS is for morph target animations -- defaulting to 10, but really it is completely arbitrary.
 					var morphAnimationClips = AnimationClip.CreateClipsFromMorphTargetSequences( geometry.morphTargets, 10 );
 					outputAnimations = outputAnimations.concat( morphAnimationClips );
 

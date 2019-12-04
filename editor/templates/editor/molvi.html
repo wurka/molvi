@@ -17,6 +17,9 @@
     <script src="{% static 'editor/js/mycookie.js' %}"></script>
 </head>
 <body>
+    <div class="splash-screen">
+        <span>MolVi</span>
+    </div>
     <!--onmouseleave="view.disableControls()"
     onmouseenter="view.enableControls()"-->
     <div class="display" id="display"
@@ -24,7 +27,31 @@
          onresize="console.log(1)"
     ></div>
     {% csrf_token %}
-    <div class="message-boxes">
+    <div class="message-boxes" id="message-boxes">
+        <div class="error-box">
+            <div class="error-text">Ошибочная ошибка. Ой-ой-ой</div>
+            <div class="button" v-on:click="closeError">Ну ладно...</div>
+        </div>
+        <div id="saveFileDialog">
+            <div class="save-mode">
+                <div class="line">
+                    <span>Сохранить как:</span>
+                    <div class="selection" id="save-mol-file">.mol</div>
+                    <div class="selection selected" id="save-document">doc</div>
+                </div>
+            </div>
+            <div class="title noselect">Введите информацию о файле</div>
+            <span>Название файла</span>
+            <input type="text" id="saveFileName" value="new_document">
+            <span>Описание документа</span>
+            <input type="text" name="description" id="saveFileDetails" placeholder="описание документа">
+            <span>Автор документа</span>
+            <input type="text" name="saveFileAuthor" id="saveFileCreator" placeholder="имя автора" value="User">
+            <div class="buttons noselect">
+                <div class="mybutton" id="saveFileDialog_okbutton" onclick="view.enableControls(); engine.saveAction(); $('#saveFileDialog').hide();">OK</div>
+                <div class="mybutton" onclick="$('#saveFileDialog').hide(); view.enableControls()">Отмена</div>
+            </div>
+        </div>
         <div id="infoMessageField">
             <div id="infoMessage">
                 <div id="infoMessageText">Привет, путник.</div>
@@ -88,26 +115,6 @@
                 <img src="" alt="" id="iimmgg" width="400px">
             </div>
 
-        </div>
-        <div id="saveFileDialog">
-            <div class="save-mode">
-                <div class="line">
-                    <span>Сохранить как:</span>
-                    <div class="selection" id="save-mol-file">.mol</div>
-                    <div class="selection selected" id="save-document">doc</div>
-                </div>
-            </div>
-            <div class="title noselect">Введите информацию о файле</div>
-            <span>Название файла</span>
-            <input type="text" id="saveFileName" value="new_document">
-            <span>Описание документа</span>
-            <input type="text" name="description" id="saveFileDetails" placeholder="описание документа">
-            <span>Автор документа</span>
-            <input type="text" name="saveFileAuthor" id="saveFileCreator" placeholder="имя автора" value="User">
-            <div class="buttons noselect">
-                <div class="mybutton" id="saveFileDialog_okbutton" onclick="view.enableControls(); engine.saveAction(); $('#saveFileDialog').hide();">OK</div>
-                <div class="mybutton" onclick="$('#saveFileDialog').hide(); view.enableControls()">Отмена</div>
-            </div>
         </div>
         <div id="openFileDialog" class="openFileDialog">
             <div class="title noselect">Список документов</div>

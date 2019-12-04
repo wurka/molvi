@@ -970,7 +970,8 @@ def get_active_data(request):
 		slink.id: {
 			"atom1": slink.atom1.id,
 			"atom2": slink.atom2.id,
-			"name": "{}{}-{}{}".format(slink.atom1.name, slink.atom1.id, slink.atom2.name, slink.atom2.id),
+			"name": "{}{}-{}{}".format(
+				slink.atom1.name, slink.atom1.documentindex, slink.atom2.name, slink.atom2.documentindex),
 			"value": round(slink.get_length(), 3)
 		} for slink in slinks}
 	bdatoms = Atom.objects.filter(document=sdoc)
@@ -1186,6 +1187,18 @@ def create_link(request):
 	except Atom.DoesNotExist:
 		return HttpResponse("There is no such atom in cluster and document", status=500)
 
+	if atom1 == atom2:
+		return HttpResponse("Нельзя создать связь атома самим с собой.", status=500)
+
+	# проверим, что такой связи еще не существует
+	finded = list(Link.objects.filter(atom1=atom1, atom2=atom2))
+	finded += list(Link.objects.filter(atom1=atom2, atom2=atom1))
+	if len(finded) > 0:
+		link = finded[0]
+		link_name = f"{link.atom1.name}{link.atom1.documentindex}-"
+		link_name += f"{link.atom2.name}{link.atom2.documentindex}"
+		return HttpResponse(f"такая связь ({link_name}) уже существует", status=500)
+
 	Link.objects.create(document=adoc, atom1=atom1, atom2=atom2)
 	return HttpResponse("OK")
 
@@ -1249,7 +1262,6 @@ def edit_link_set_length(request):
 		point = points[indx]
 		on_top[a.id] = point.on_top(plane)
 	# on_top = [point.on_top(plane) for point in points]
-	# TODO: заменить одной строкой
 	devider = sqrt(line.kx**2 + line.ky**2 + line.kz**2)
 	movex = delta * line.kx / devider
 	movey = delta * line.ky / devider

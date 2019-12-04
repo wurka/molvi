@@ -271,18 +271,18 @@ def load_document(request):
 	Link.objects.filter(document=adoc).delete()
 
 	# валентные углы
-	# TODO: добавить удаление валентных угло
 
 	# атомы
 	clusters = Cluster.objects.filter(document=adoc)
 	for cluster in clusters:
 		cluster_atom = ClusterAtom.objects.filter(cluster=cluster)
-		cluster_atom.atom.delete()
+		for ca in cluster_atom:
+			ca.atom.delete()
 		cluster.delete()
 
 	# создаём новые записи #################
 	try:
-		ldoc = Document.objects.get(id=request.GET['id'])
+		ldoc = Document.objects.get(id=request.POST['id'])
 	except Document.DoesNotExist:
 		return HttpResponse(
 			"there is no document with id {request.GET['id']} in base", status=500)
@@ -316,7 +316,7 @@ def load_document(request):
 	old2new_clusters = dict()
 	clusters = Cluster.objects.filter(document=ldoc)
 	for cluster in clusters:
-		newcluster = cluster.objects.create(
+		newcluster = Cluster.objects.create(
 			document=adoc,
 			caption=cluster.caption
 		)
@@ -340,7 +340,7 @@ def load_document(request):
 		old2new_links[link.id] = newlink.id
 
 	# валентные углы
-	# TODO: валентные углы доделать
+
 
 	# двугранные углы
 	dh_angles = DihedralAngle.objects.filter(document=ldoc)

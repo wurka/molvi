@@ -8,7 +8,6 @@ function saveFileDialog_onkeydown(event) {
 $(document).ready(()=> {
         let element = document.getElementById("saveFileDialog");
         element.addEventListener("keydown", (event)=>{
-            console.log(event.code);
             if (event.code === "Enter") {
                 $("#saveFileDialog_okbutton").click();
             }
