@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Demo viewer</title>
+    <script src="{% static 'editor/js/three.js' %}"></script>
+    <script src="{% static 'editor/js/OrbitControls.js' %}"></script>
+    <script src="{% static 'editor/js/jquery-3.2.0.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'demo/demo-viewer.css' %}">
+</head>
+<body style="margin: 0; font-size: 0">
+    <div class="layout" id="app" style="background: pink">
+        <transition name="fade">
+            <div class="action-text" v-if="actionText !== '' ">[[ actionText ]]</div>
+        </transition>
+        <div id="gui">
+        <div class="menu" v-if="mode === '3dView'" @click="setMode('select')">Открыть меню</div>
+        <div class="internal2cartesian" v-if="mode === 'i2c'">
+            <div class="header">
+                <div class="comment">Загрузите в левую область данные и нажмите</div>
+                <div class="action">"ПРЕОБРАЗОВАТЬ"</div>
+                <input type="file" value="Загрузить из файла" @change="i2cFileOpen" ref="i2cFile">
+            </div>
+            <div class="fields">
+                <div class="input-field" ref="inputField" contenteditable="true"></div>
+                <div class="output-field">
+                    <span class="empty-result" v-if="i2cResult === ''">здесь будут выведены результаты</span>
+                    <div v-html="i2cResultText"></div>
+                </div>
+            </div>
+            <div class="buttons">
+                <input type="button" value="преобразовать" class="button" @click="i2cWork">
+                <input type="button" value="показать в 3D" class="button" @click="i2cGo3D">
+                <input type="button" value="отмена" class="button" @click="setMode('select')">
+            </div>
+        </div>
+        <div id="selector" v-if="mode === 'select'">
+            <div class="close" @click="setMode('3dView')"><span>&times;</span></div>
+            <div class="button" @click="setMode('i2c')">
+                Internal -> cartesian
+            </div>
+            <div class="button">Cartesian -> internal</div>
+            <div class="button">View 3D</div>
+        </div>
+    </div>
+    </div>
+    <script src="{% static 'editor/js/vue.js' %}"></script>
+    <script type="module" src="{% static 'demo/demo-viewer.js' %}"></script>
+</body>
+</html>

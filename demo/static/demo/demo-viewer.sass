@@ -1,0 +1,126 @@
+.fade-enter-active, .fade-leave-active
+  transition: opacity 1.0s
+
+.fade-enter, .fade-leave-to
+  opacity: 0
+  transition: opacity 1.0s
+
+.menu
+  color: white
+  cursor: pointer
+  text-decoration: underline
+
+.html-label
+  position: absolute
+  text-align: left
+  text-shadow: black 0 0 1px
+  color: white
+  pointer-events: none
+  font-size: 14px
+  z-index: 101
+
+.action-text
+  z-index: 100
+  position: absolute
+  font-size: 24px
+  font-family: Consolas, Monospace, Arial, serif
+  width: 70vw
+  margin: 30vh  0 0 15vw
+  text-align: center
+  background: white
+  border: 1px solid gray
+  padding: 30px
+  box-sizing: border-box
+  box-shadow: 0 0 10px #00ffff
+
+#gui
+  position: absolute
+  font-size: 14px
+  top: 0
+  left: 0
+  width: 100vw
+  height: 100vh
+
+#selector
+  background: white
+  position: absolute
+  color: black
+  font-size: 14px
+  margin: 30vh 0 0 30vw
+  .close
+    text-align: right
+    span
+      margin: 10px
+      font-size: 30px
+      border: 1px solid transparent
+      color: gray
+      cursor: pointer
+      &:hover
+        color: black
+      &:active
+        color: red
+  .button
+    border: 1px solid gray
+    font-size: 24px
+    width: 300px
+    text-align: center
+    cursor: default
+    margin: 10px
+    padding: 5px
+    &:hover
+      background: #f5f5f5
+    &:active
+      background: lightskyblue
+
+.internal2cartesian
+  font-size: 18px
+  background: white
+  position: absolute
+  top: 20vh
+  left: 20vw
+  z-index: 2
+  width: 500px
+  .header
+    text-align: center
+    .action
+      text-decoration: underline
+      cursor: pointer
+      font-family: Consolas
+      &:hover
+        background: #f5f5f5
+        font-weight: bold
+  .fields
+    display: flex
+    font-size: 14px
+    .input-field
+      flex-basis: 100%
+      height: 300px
+      overflow: scroll
+      border: 1px solid gray
+      margin: 10px
+      white-space: nowrap
+    .output-field
+      flex-basis: 100%
+      height: 300px
+      overflow: scroll
+      border: 1px solid gray
+      margin: 10px
+  .buttons
+    text-align: right
+    margin: 0 5px 5px 0
+    .button
+      margin: 5px
+      background: white
+      font-size: 14px
+      color: black
+      border: 1px solid lightgray
+      padding: 5px
+      width: 130px
+      &:hover
+        border: 1px solid black
+  .empty-result
+    color: gray
+    text-align: center
+    display: inline-block
+    padding: 20px 10px 0 10px
+    width: 185px

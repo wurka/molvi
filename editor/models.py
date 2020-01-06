@@ -40,7 +40,7 @@ class MatrixZ(models.Model):
 	owner = models.ForeignKey(MolFile, on_delete=models.CASCADE)  # документ, к которому относится матрица
 	coordinates = models.TextField(default="unknown")
 	units = models.TextField(default="unknown")
-	data = models.BinaryField(default="")  # serialised numpy array of data
+	data = models.BinaryField(default=b"")  # serialised numpy array of data
 
 
 # Create your models here.
